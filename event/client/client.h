@@ -17,7 +17,7 @@
 #include <signal.h>
 #include <time.h>
 #include <termios.h>  
-
+ 
 
 //定义参数宏
 #define LOGIN                    1
@@ -50,6 +50,7 @@
 #define MAX_PACK_CONTIAN 100
 #define MAX_CHAR         300
 #define NUM_MAX_DIGIT    10
+#define USER_MAX        100
 
 #define DOWNLINE   0
 #define ONLINE     1
@@ -68,14 +69,18 @@
       char name[MAX_CHAR];
   }FRIEND_INFO;
 
+
   //用户信息
   typedef struct user_infor{
       char        username    [MAX_CHAR];
       FRIEND_INFO friends     [MAX_CHAR];
       int         friends_num;
-      char        group       [MAX_CHAR][MAX_CHAR];
+      char        group      [USER_MAX][MAX_CHAR];
       int         group_num;
+      int         group_member_num;
+      char        group_member_name[USER_MAX][MAX_CHAR];
   }USER_INFOR;
+
 
   //和服务端保持一致
   //包信息
@@ -157,8 +162,9 @@ int login_menu();
 void show_mes_smart(char *name  ,char *mes);
 void friends_see();
 void group_see();
+void group_member_see();
 void print_main_menu();
-
+ 
 //工具函数
 void my_err(const char * err_string,int line);
 void sig_close(int i);

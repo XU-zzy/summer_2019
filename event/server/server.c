@@ -1,5 +1,171 @@
 #include"server.h"
+//添加好友同意
+PACK recv_t_add_agree;
+
+
+int main()
+{
+    int n;
+    
+    pthread_t pid;
+    /* PACK recv_t; */
+    PACK *recv_pack;
+    int err,socketfd,fd_num;
+    struct sockaddr_in fromaddr;
+    socklen_t len = sizeof(fromaddr);
+    struct epoll_event ev, events[LISTENMAX];
  
+ 
+    //读取信息
+    read_infor();
+    
+ 
+    //mysql开关，链接mysql
+       conect_mysql_init();
+ 
+    signal(SIGINT,signal_close);//退出CTRL+C
+    pthread_mutex_init(&mutex, NULL);  
+ 
+ 
+    printf("服务器开始启动..\n");
+    
+    //开启发送离线包线程
+    init_server_pthread();
+    
+    epollfd = epoll_create(EPOLL_MAX);//生成epoll句柄
+    
+    listenfd = socket(AF_INET,SOCK_STREAM,0);//启动socket
+    if(listenfd == -1){
+        perror("创建socket失败");
+        printf("服务器启动失败\n");
+        exit(-1);
+    }
+ 
+    err = 1;
+ 
+    setsockopt(listenfd,SOL_SOCKET,SO_REUSEADDR,&err,sizeof(int)); 
+ 
+    ev.data.fd = listenfd;//设置与要处理事件相关的文件描述符
+    ev.events = EPOLLIN;//设置要处理的事件类型
+    epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &ev);//注册epoll事件
+ 
+    //准备网络通信地址
+    struct sockaddr_in addr;
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(PORT);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    
+    if(bind(listenfd,(SA*)&addr,sizeof(addr))==-1){//绑定服务器
+        perror("绑定失败");
+        printf("服务器启动失败\n");
+        exit(-1);
+    }
+    printf("成功绑定\n");
+ 
+    //设置监听
+    if(listen(listenfd,10)==-1){
+        perror("设置监听失败");
+        printf("服务器启动失败\n");
+        exit(-1);
+    }
+    printf("设置监听成功\n");
+    printf("初始化服务器成功\n");
+    printf("服务器开始服务\n");
+    
+    
+    while(1)
+    {
+        //等待事件产生
+        fd_num = epoll_wait(epollfd, events, EPOLL_MAX, 1000);
+        
+        for(int i=0; i<fd_num; i++)
+        {
+            if(events[i].data.fd == listenfd)
+            {   
+                //接收套接字
+                socketfd = accept(listenfd,(SA*)&fromaddr,&len);
+                printf("%d 连接成功\n",socketfd);
+                ev.data.fd = socketfd;
+                ev.events = EPOLLIN;//设置监听事件可写
+                
+                //新增套接字
+                epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &ev);
+            }
+            else if(events[i].events & EPOLLIN)//fd can read
+            {
+ 
+                n = recv(events[i].data.fd,&recv_t_add_agree,sizeof(PACK),0);//读取数据
+                recv_t_add_agree.data.send_fd = events[i].data.fd;
+                
+                //输出收到的包信息
+                printf("\n\n\n ******PACK******\n");
+                printf(" type     : %d\n", recv_t_add_agree.type);
+                printf(" send_name: %s\n", recv_t_add_agree.data.send_name);
+                printf(" recv_name: %s\n", recv_t_add_agree.data.recv_name);
+                printf(" mes      : %s\n", recv_t_add_agree.data.mes);
+                printf(" send_fd   : %d\n",recv_t_add_agree.data.send_fd);
+                printf(" recv_fd   : %d\n",recv_t_add_agree.data.recv_fd);
+                printf(" send_pack_num:%d\n", m_send_num);
+                printf("*******************\n\n");
+ 
+                if(n < 0)//recv错误
+                {     
+                    close(events[i].data.fd);
+                    perror("recv");
+                    continue;
+                }
+                else if(n == 0)
+                {
+                    //客户端下线后，把客户端状态设置为下线
+                    for(int j=1;j<=m_user_num;j++)
+                    {
+                        if(events[i].data.fd == m_infor_user[j].socket_id)
+                        {
+                            printf("%s 下线了!\n",m_infor_user[j].username);
+                            m_infor_user[j].statu = DOWNLINE;
+                            break;
+                        }
+                    }   
+                    ev.data.fd = events[i].data.fd;
+                    epoll_ctl(epollfd, EPOLL_CTL_DEL, events[i].data.fd, &ev);//删除套接字
+                    close(events[i].data.fd);
+                    print_infor_user();
+                    continue;   
+                }
+                
+                
+                //pthread_mutex_lock(&mutex); 
+                //print_send_pack();
+                //pthread_mutex_unlock(&mutex);                 
+                //printf("m_file_num1:%d\n", m_file_num);
+                //print_infor_file();
+                // printf("m_file_num2:%d\n", m_file_num);
+                //printf("hahah ****\n"); 
+ 
+                int type =  0;
+                type = recv_t_add_agree.type;
+                recv_pack = (PACK*)malloc(sizeof(PACK));
+                memcpy(recv_pack, &recv_t_add_agree, sizeof(PACK));
+                
+ 
+                //开启线程处理接受到的包
+                if(pthread_create(&pid,NULL,deal,(void *)recv_pack) != 0)
+                    my_err("pthread_create",__LINE__);
+                if(type == FILE_SEND)
+                {
+                    printf("wati...\n");
+                    usleep(100000);
+                }
+            }
+ 
+        }
+    }
+    return 0;
+}
+
+
+
+
 //启动 
 //处理包的函数，每接受到一个包，开新线程，根据类型进行处理
 void *deal(void *recv_pack_t)
@@ -71,6 +237,7 @@ void *deal(void *recv_pack_t)
         case FILE_FINI_RP:
             file_send_finish(recv_pack);
             break;
+        //消息记录
         case MES_RECORD:
             send_record(recv_pack);
         case EXIT:
@@ -263,167 +430,6 @@ void init_server_pthread()
     //pthread_create(&pid_file_check,NULL,pthread_check_file,NULL);
 } 
  
-//添加好友同意
-PACK recv_t_add_agree;
-int main()
-{
-    int n;
-    
-    pthread_t pid;
-    /* PACK recv_t; */
-    PACK *recv_pack;
-    int err,socketfd,fd_num;
-    struct sockaddr_in fromaddr;
-    socklen_t len = sizeof(fromaddr);
-    struct epoll_event ev, events[LISTENMAX];
- 
- 
-    //读取信息
-    read_infor();
-    
- 
-    //mysql开关，链接mysql
-       conect_mysql_init();
- 
-    signal(SIGINT,signal_close);//退出CTRL+C
-    pthread_mutex_init(&mutex, NULL);  
- 
- 
-    printf("服务器开始启动..\n");
-    
-    //开启发送离线包线程
-    init_server_pthread();
-    
-    epollfd = epoll_create(EPOLL_MAX);//生成epoll句柄
-    
-    listenfd = socket(AF_INET,SOCK_STREAM,0);//启动socket
-    if(listenfd == -1){
-        perror("创建socket失败");
-        printf("服务器启动失败\n");
-        exit(-1);
-    }
- 
-    err = 1;
- 
-    setsockopt(listenfd,SOL_SOCKET,SO_REUSEADDR,&err,sizeof(int)); 
- 
-    ev.data.fd = listenfd;//设置与要处理事件相关的文件描述符
-    ev.events = EPOLLIN;//设置要处理的事件类型
-    epoll_ctl(epollfd, EPOLL_CTL_ADD, listenfd, &ev);//注册epoll事件
- 
-    //准备网络通信地址
-    struct sockaddr_in addr;
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(PORT);
-    addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    
-    if(bind(listenfd,(SA*)&addr,sizeof(addr))==-1){//绑定服务器
-        perror("绑定失败");
-        printf("服务器启动失败\n");
-        exit(-1);
-    }
-    printf("成功绑定\n");
- 
-    //设置监听
-    if(listen(listenfd,10)==-1){
-        perror("设置监听失败");
-        printf("服务器启动失败\n");
-        exit(-1);
-    }
-    printf("设置监听成功\n");
-    printf("初始化服务器成功\n");
-    printf("服务器开始服务\n");
-    
-    
-    while(1)
-    {
-        //等待事件产生
-        fd_num = epoll_wait(epollfd, events, EPOLL_MAX, 1000);
-        
-        for(int i=0; i<fd_num; i++)
-        {
-            if(events[i].data.fd == listenfd)
-            {   
-                //接收套接字
-                socketfd = accept(listenfd,(SA*)&fromaddr,&len);
-                printf("%d 连接成功\n",socketfd);
-                ev.data.fd = socketfd;
-                ev.events = EPOLLIN;//设置监听事件可写
-                
-                //新增套接字
-                epoll_ctl(epollfd, EPOLL_CTL_ADD, socketfd, &ev);
-            }
-            else if(events[i].events & EPOLLIN)//fd can read
-            {
- 
-                n = recv(events[i].data.fd,&recv_t_add_agree,sizeof(PACK),0);//读取数据
-                recv_t_add_agree.data.send_fd = events[i].data.fd;
-                
-                //输出收到的包信息
-                printf("\n\n\n ******PACK******\n");
-                printf(" type     : %d\n", recv_t_add_agree.type);
-                printf(" send_name: %s\n", recv_t_add_agree.data.send_name);
-                printf(" recv_name: %s\n", recv_t_add_agree.data.recv_name);
-                printf(" mes      : %s\n", recv_t_add_agree.data.mes);
-                printf(" send_fd   : %d\n",recv_t_add_agree.data.send_fd);
-                printf(" recv_fd   : %d\n",recv_t_add_agree.data.recv_fd);
-                printf(" send_pack_num:%d\n", m_send_num);
-                printf("*******************\n\n");
- 
-                if(n < 0)//recv错误
-                {     
-                    close(events[i].data.fd);
-                    perror("recv");
-                    continue;
-                }
-                else if(n == 0)
-                {
-                    //客户端下线后，把客户端状态设置为下线
-                    for(int j=1;j<=m_user_num;j++)
-                    {
-                        if(events[i].data.fd == m_infor_user[j].socket_id)
-                        {
-                            printf("%s 下线了!\n",m_infor_user[j].username);
-                            m_infor_user[j].statu = DOWNLINE;
-                            break;
-                        }
-                    }   
-                    ev.data.fd = events[i].data.fd;
-                    epoll_ctl(epollfd, EPOLL_CTL_DEL, events[i].data.fd, &ev);//删除套接字
-                    close(events[i].data.fd);
-                    print_infor_user();
-                    continue;   
-                }
-                
-                
-                //pthread_mutex_lock(&mutex); 
-                //print_send_pack();
-                //pthread_mutex_unlock(&mutex);                 
-                //printf("m_file_num1:%d\n", m_file_num);
-                //print_infor_file();
-                // printf("m_file_num2:%d\n", m_file_num);
-                //printf("hahah ****\n"); 
- 
-                int type =  0;
-                type = recv_t_add_agree.type;
-                recv_pack = (PACK*)malloc(sizeof(PACK));
-                memcpy(recv_pack, &recv_t_add_agree, sizeof(PACK));
-                
- 
-                //开启线程处理接受到的包
-                if(pthread_create(&pid,NULL,deal,(void *)recv_pack) != 0)
-                    my_err("pthread_create",__LINE__);
-                if(type == FILE_SEND)
-                {
-                    printf("wati...\n");
-                    usleep(100000);
-                }
-            }
- 
-        }
-    }
-    return 0;
-}
 
 
 
@@ -528,10 +534,6 @@ void registe(PACK *recv_pack)
 }
  
  
- 
- 
- 
- 
 //把该客户端的朋友信息返回给客户端
 //查看好友
 void send_statu(PACK *recv_pack)
@@ -558,6 +560,7 @@ void send_statu(PACK *recv_pack)
             if(strcmp(name_t,m_infor_user[j].username) == 0)
             {
                 memset(str,0,sizeof(str));
+                //写入用户和所处状态
                 if(m_infor_user[j].statu == ONLINE)
                     sprintf(str,"%d %s\0",ONLINE,m_infor_user[j].username);
                 else
@@ -628,9 +631,6 @@ void friend_add(PACK *recv_pack){
     send_pack(recv_pack);
     free(recv_pack);
 }
-
-
- 
  
 //删除好友
 void friend_del(PACK *recv_pack)
@@ -693,18 +693,25 @@ void group_join(PACK *recv_pack)
     //找到该群，并加入
     for(int i=1;i<= m_group_num;i++)
     {
+        //找到群
         if(strcmp(m_infor_group[i].group_name,recv_pack->data.mes) == 0)
         {
+            //用户加入群
             strcpy(m_infor_group[i].member_name[++m_infor_group[i].member_num],recv_pack->data.send_name);
+            
+            //寻找用户id，将群组名称加入到用户信息中
             int id=find_userinfor(recv_pack->data.send_name);
             strcpy(m_infor_user[id].group[++m_infor_user[id].group_num],recv_pack->data.mes);
  
+            //给包赋值
             strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
             strcpy(recv_pack->data.send_name,"server");
             recv_pack->data.mes[0] = 2; 
             printf("\n\n %s join group : %s  successfully! \n\n",recv_pack->data.recv_name, recv_pack->data.mes);
             print_infor_group();
             print_infor_user();
+            
+            //发包
             send_pack(recv_pack);
             free(recv_pack);
             return ;
@@ -744,6 +751,51 @@ void group_qiut(PACK *recv_pack)
     }
 }
  
+
+//查看群成员
+void check_group(PACK *recv_pack){
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //删除一个指定ID的群组，并从其群成员的信息中删除该组的信息
 void group_del_one(int id)
 {
@@ -1040,7 +1092,6 @@ void *file_send_send(void *file_send_begin_t,char *file_name_t)
 }
  
 //客户端请求接收文件,
- 
 void file_send_begin(PACK *recv_pack)
 {
     PTHREAD_PAR *file_send_begin_t;
@@ -1681,7 +1732,7 @@ void MD5Transform(unsigned int state[4],unsigned char block[64])
     GG(d, a, b, c, x[10], 9,  0x2441453);   
     GG(c, d, a, b, x[15], 14, 0xd8a1e681);   
     GG(b, c, d, a, x[ 4], 20, 0xe7d3fbc8);   
-    
+     
     GG(a, b, c, d, x[ 9], 5, 0x21e1cde6);   
     GG(d, a, b, c, x[14], 9, 0xc33707d6);   
     GG(c, d, a, b, x[ 3], 14, 0xf4d50d87);   

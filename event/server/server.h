@@ -13,7 +13,7 @@
 #include <signal.h>
 #include <time.h>
 #include <math.h>
- 
+  
 #define LOGIN                    1
 #define REGISTER                 2
 #define FRIEND_SEE               3
@@ -79,9 +79,9 @@ typedef struct infor_user
     unsigned int password[4]; //经加密后密码
     int  statu;               //用户状态
     int  socket_id;           //用户socketID
-    char friends[USER_MAX][MAX_CHAR];//begin from 1  好友信息
+    char friends[USER_MAX][MAX_CHAR];// 好友信息
     int  friends_num;                //  好友数量
-    char group[GROUP_MAX][MAX_CHAR];  //begin from 1  群组信息
+    char group[GROUP_MAX][MAX_CHAR];  // 群组信息
     char group_num;                   //群组数量
 }INFO_USER;
  
@@ -89,8 +89,8 @@ typedef struct infor_user
 typedef struct infor_group
 {
     char  group_name[MAX_CHAR];  //组名
-    int   member_num;            //成名数量
-    char  member_name[USER_MAX][MAX_CHAR];  //begin from 1  成员名
+    int   member_num;            //成员数量
+    char  member_name[USER_MAX][MAX_CHAR];  //成员名
 }INFO_GROUP;
  
 //储存文件信息结构体

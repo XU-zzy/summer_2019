@@ -109,7 +109,7 @@ void *deal_statu(void *arg)
 }
  
  
-//一直接收客户端发来的包
+//一直接收服务器发来的包
 //并把包存储到数组当中
 void *clien_recv_thread(void *arg)
 {
@@ -409,21 +409,87 @@ void friends_see()
     pthread_mutex_unlock(&mutex_local_user);  
 }
  
- 
- 
 
 //群组信息查看
 void group_see()
 {
     pthread_mutex_lock(&mutex_local_user); 
     printf("***********群组列表*************  \n");
+    //int i;
     for(int i=1 ;i<=m_my_infor.group_num ;i++){
         printf("  ID[%d]:       %s", i,m_my_infor.group[i]);
     }
     printf("\n\n");
     printf("*************************************** \n");
+    int choice;
+    do{
+        printf("[1]查看群成员\t[2]退出\n");
+        fflush(stdin);
+        scanf("%d",&choice);
+
+        if(choice == 1){
+            group_member_see();
+        }
+
+        if(choice != 1 && choice != 2){
+            printf("请重新输入\n");
+        }
+
+    }while(choice != 2 && choice != 1);
     pthread_mutex_unlock(&mutex_local_user);  
 }
+
+//查看群成员列表
+void group_member_see(){
+    int choice;
+    do{
+        printf("请输入你要查看的群组的序号（输入0退出）：");
+        fflush(stdin);
+        scanf("%d",&choice);
+        
+        if(choice != 0){
+            printf("正在查询.....\n");
+            sleep(2);
+            printf("\n************群成员列表**************\n");
+
+            for(int i = 1;i <= m_my_infor.group_member_num;i++){
+                printf("ID[%d]\t\t%s\n",i,m_my_infor.group_member_name[choice][i]);
+            }
+
+            printf("\n**************************************\n");
+        }
+
+    }while(choice != 0);
+    return;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
  
 //主菜单 
 void print_main_menu()
