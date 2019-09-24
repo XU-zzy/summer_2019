@@ -76,7 +76,7 @@ pthread_mutex_t  mutex_check_file;
 typedef struct infor_user 
 {
     char username[MAX_CHAR];  //用户名
-    unsigned int password[4]; //经加密后密码
+    char password[MAX_CHAR];          //密码
     int  statu;               //用户状态
     int  socket_id;           //用户socketID
     char friends[USER_MAX][MAX_CHAR];// 好友信息
@@ -112,6 +112,7 @@ typedef struct datas{
     int      recv_fd;              //接收方fd
     //time_t   time;
     char     mes[MAX_CHAR*2];      //信息
+    //int      *nummber[MAX_CHAR];
 }DATA;
  
 typedef struct package{
@@ -128,78 +129,6 @@ typedef struct pthread_parameter
 }PTHREAD_PAR;
  
 typedef struct sockaddr SA;//类型转换
- 
- 
-/*********************md5*****************************************
-/***********************************
- * 非线性函数
- * (&是与,|是或,~是非,^是异或) 
- * 
- * 这些函数是这样设计的：
- *   如果X、Y和Z的对应位是独立和均匀的，
- *   那么结果的每一位也应是独立和均匀的。 
- * 
- * 函数F是按逐位方式操作：如果X，那么Y，否则Z。
- * 函数H是逐位奇偶操作符
- **********************************/
-#define F(x,y,z) ((x & y) | (~x & z))  
-#define G(x,y,z) ((x & z) | (y & ~z))  
-#define H(x,y,z) (x^y^z)  
-#define I(x,y,z) (y ^ (x | ~z))  
- 
- 
-/**************************************
- *向右环移n个单位
- * ************************************/
-#define ROTATE_LEFT(x,n) ((x << n) | (x >> (32-n)))  
- 
- 
- 
- 
-/****************************************************
- * 每次操作对a，b，c和d中的其中三个作一次非线性函数运算
- *  F(b,c,d)   G(b,c,d)   H(b,c,d)   I(b,c,d)
- *
- * 然后将所得结果加上 第四个变量(a)，
- * F(b,c,d)+a
- *
- * 文本的一个子分组(x)
- * F(b,c,d)+a+x
- * 
- * 和一个常数(ac)。
- * F(b,c,d)+a+x+ac
- *
- * 再将所得结果向右环移一个不定的数(s)，
- * ROTATE_LEFT( F(b,c,d)+a+x+ac , s )
- * 
- * 并加上a，b，c或d中之一(b)。
- * ROTATE_LEFT( F(b,c,d)+a+x+ac , s )+b
- * 
- * 最后用该结果取代a，b，c或d中之一(a)。
- * a=ROTATE_LEFT( F(b,c,d)+a+x+ac , s )+b
- * 
- * ***************************************************/
- 
- 
-#define FF(a,b,c,d,x,s,ac) { a += F(b,c,d) + x + ac;  a = ROTATE_LEFT(a,s); a += b; }
-#define GG(a,b,c,d,x,s,ac) { a += G(b,c,d) + x + ac;  a = ROTATE_LEFT(a,s); a += b; }
-#define HH(a,b,c,d,x,s,ac) { a += H(b,c,d) + x + ac;  a = ROTATE_LEFT(a,s); a += b; }
-#define II(a,b,c,d,x,s,ac) { a += I(b,c,d) + x + ac;  a = ROTATE_LEFT(a,s); a += b; }
- 
-
- 
-//储存一个MD5 text信息 
-typedef struct  
-{  
-    unsigned int count[2];    
-    //记录当前状态，其数据位数   
-    
-    unsigned int state[4];    
-    //4个数，一共32位 记录用于保存对512bits信息加密的中间结果或者最终结果  
-    
-    unsigned char buffer[64];
-    //一共64字节，512位      
-}MD5_CTX;  
   
 
  
@@ -221,7 +150,7 @@ int find_userinfor(char username_t[]);
 void signal_close(int i);
 void send_pack(PACK *pack_send_pack_t);
 void send_pack_memcpy_server(int type,char *send_name,char *recv_name,int sockfd1,char *mes);
-bool md5_judge(int id,char *log_pass);
+int passward_judge(int id,char *log_pass);
 int judge_usename_same(char username_t[]);
 void del_friend_infor(int id,char friend_name[]) ;
 void del_group_from_user(char *username,char *groupname);
@@ -246,23 +175,10 @@ void *file_send_send(void *file_send_begin_t);
 void file_send_begin(PACK *recv_pack);
 void file_send_finish(PACK *recv_pack);
 void send_record(PACK *recv_pack);
- 
-/**************md5*********************/
-void MD5Init(MD5_CTX *context);  
-void MD5Update(MD5_CTX *context,unsigned char *input,unsigned int inputlen);  
-void MD5Final(MD5_CTX *context,unsigned char digest[16]);  
-void MD5Transform(unsigned int state[4],unsigned char block[64]);  
-void MD5Encode(unsigned char *output,unsigned int *input,unsigned int len);  
-void MD5Decode(unsigned int *output,unsigned char *input,unsigned int len);  
-int md5(char encrypt_input[10000],unsigned int decrypt[4]);
-
-unsigned char PADDING[]={0x80,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  
-0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};  
+  
  
 //读取在线用户和群主信息
-INFO_USER  m_infor_user  [USER_MAX];
+INFO_USER  user_infor  [USER_MAX];
 int        m_user_num; 
 INFO_GROUP   m_infor_group  [GROUP_MAX]; 
 int          m_group_num;

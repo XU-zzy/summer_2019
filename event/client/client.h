@@ -117,6 +117,8 @@
 
   typedef struct sockaddr SA;
 
+
+extern USER_INFOR m_my_infor;
 //-------------------------------------------------------
 //函数定义
 
@@ -139,7 +141,9 @@ void del_friend();
 void group_create();
 void group_join();
 void group_qiut();
-void group_del();  
+void group_del();
+void group_mes_get(USER_INFOR m_my_infor);
+void get_group_member(int n);
 void send_mes_to_one();
 void send_mes_to_group();
 void send_mes(char mes_recv_name[],int type);
@@ -157,7 +161,7 @@ void *pthread_recv_file(void *par_t);
 int mes_record();
 void print_mes_record(PACK* pack_t);
  
-//view函数
+//界面函数
 int login_menu();
 void show_mes_smart(char *name  ,char *mes);
 void friends_see();

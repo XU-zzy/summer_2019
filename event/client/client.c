@@ -413,7 +413,11 @@ void friends_see()
 //群组信息查看
 void group_see()
 {
-    pthread_mutex_lock(&mutex_local_user); 
+    pthread_mutex_lock(&mutex_local_user);
+    
+    //获取群信息
+    //group_mes_get(m_my_infor);
+    
     printf("***********群组列表*************  \n");
     //int i;
     for(int i=1 ;i<=m_my_infor.group_num ;i++){
@@ -421,7 +425,7 @@ void group_see()
     }
     printf("\n\n");
     printf("*************************************** \n");
-    int choice;
+    /*int choice;
     do{
         printf("[1]查看群成员\t[2]退出\n");
         fflush(stdin);
@@ -436,6 +440,7 @@ void group_see()
         }
 
     }while(choice != 2 && choice != 1);
+    */
     pthread_mutex_unlock(&mutex_local_user);  
 }
 
@@ -448,6 +453,8 @@ void group_member_see(){
         scanf("%d",&choice);
         
         if(choice != 0){
+            get_group_member(choice);
+
             printf("正在查询.....\n");
             sleep(2);
             printf("\n************群成员列表**************\n");
@@ -463,7 +470,9 @@ void group_member_see(){
     return;
 }
 
+void get_group_member(int n){
 
+}
 
 
 
@@ -529,6 +538,7 @@ int send_login(char username_t[],char password_t[])
     
     //接收服务器返回的登录消息
     login_judge_flag = recv_login_t.data.mes[0] - 48;
+    //printf("---------recv_login_t.data.mes[0] = %d\n",recv_login_t.data.mes[0]);
     return login_judge_flag;
 }
  
@@ -548,6 +558,8 @@ int login()
  
     login_flag = send_login(username_t,password_t);
     
+    //printf("--------------------------------------%d\n",login_flag);
+
     if(login_flag ==  2){
         printf("用户未注册.\n");
         return 0;
@@ -1175,10 +1187,10 @@ void deal_file_mes(int id)
     else if(m_pack_recv_file_mes[id].type == FILE_RECV_BEGIN)
     {
         mes_recv_requir(id);
-    }else if(m_pack_recv_file_mes[id].type == FILE_RECV_STOP_RP)
+    }/*else if(m_pack_recv_file_mes[id].type == FILE_RECV_STOP_RP)
     {
         mes_recvfile_fail(id);
-    }
+    }*/
 }
  
  
@@ -1288,78 +1300,8 @@ void mes_recv_requir(int id)
     file_infor_delete(id);
 }
  
-//处理接收文件中断信息，
-//并询问是否继续接收
-void mes_recvfile_fail(int id)
-{
-    pthread_t  pid_recv_file;
-    char chioce[10];
-    int begin_location_server;
-    int file_size;
-    char file_name[SIZE_PASS_NAME];
-    char mes_t[MAX_CHAR];
-    PTHREAD_PAR * par_t = (PTHREAD_PAR *)malloc(sizeof(PTHREAD_PAR));
-    //解析已经接收的字节数
-    for(int i=0 ;i<NUM_MAX_DIGIT ;i++)
-    {
-        if(m_pack_recv_file_mes[id].data.mes[i] == -1)  
-            break;
-        int t1 = 1;
-        for(int l=0;l<i;l++)
-            t1*=10;
-        file_size += (int)m_pack_recv_file_mes[id].data.mes[i]*t1;
- 
-    }   
- 
-    strcpy(file_name,m_pack_recv_file_mes[id].data.mes+NUM_MAX_DIGIT);
-    
-    begin_location_server= get_file_size(file_name);
-    
- 
-    par_t->a = file_size;
-    par_t->b = begin_location_server;
-    printf("文件 %s 接收失败 ,已经接收了 %d%%,是否选择继续?\n", file_name,(int)((double)begin_location_server/file_size*100));
-    
-    printf("[1]继续\t[2]放弃\n");
-    printf("请输入你的选择：");
-    scanf("%s",chioce);
-    
-    
- 
-    if(chioce[0] == '2' )
-    {
-        file_infor_delete(id); 
-        return ;
-    }
- 
- 
-    int len = begin_location_server;
-    int digit = 0;
-    while(len != 0)
-    {   
-        mes_t[digit++] = len%10;
-        len /= 10;
-    }
-    mes_t[digit]  = -1;
- 
-    //返回同意信息
-    send_pack_memcpy(FILE_SEND_BEGIN_RP ,m_my_infor.username ,file_name ,mes_t);
-    //开启线程接收文件
-    pthread_create(&pid_recv_file,NULL,pthread_recv_file,(void *)par_t);
- 
-    file_infor_delete(id);
-}
+
 //----------------------------------------------------------------------------------------------------------------- 
-
-
-
-
-
-
-
-
-
-
 
 //接收文件线程，
 //从存储接收包的地方检索到信息
@@ -1392,7 +1334,6 @@ void *pthread_recv_file(void *par_t)
             }
  
             strcpy(file_name,m_pack_recv_file[i].data.send_name);
-            //you can creat this file when you get the file_send_begin
             if((fd = open(file_name,O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR)) < 0)
             {
                 my_err("open",__LINE__);
