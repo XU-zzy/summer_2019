@@ -85,15 +85,15 @@
   //和服务端保持一致
   //包信息
   typedef struct datas{
-      char    send_name[MAX_CHAR];
-      char    recv_name[MAX_CHAR];
-      int     send_fd;
-      int     recv_fd;
-      //time_t  time;
-      
-      //发送所带信息
-      char    mes[MAX_CHAR*2];
-  }DATA;
+    char     send_name[MAX_CHAR];  //发送方
+    char     recv_name[MAX_CHAR];  //接收方
+    int      send_fd;              //发送方fd
+    int      recv_fd;              //接收方fd
+    //time_t   time;
+    char     mes[MAX_CHAR*2];      //信息
+    char     group_chat[USER_MAX];   //存储群聊时发送消息的人
+    //int      *nummber[MAX_CHAR];
+}DATA;
 
   typedef struct package{
       //包的类型
@@ -136,6 +136,7 @@ int send_registe(char username_t[],char password_t[]);
 void registe();
 void get_status_mes();
 void change_statu(PACK pack_deal_statu_t);
+
 void add_friend();
 void del_friend();
 void group_create();
@@ -144,22 +145,30 @@ void group_qiut();
 void group_del();
 void group_mes_get(USER_INFOR m_my_infor);
 void get_group_member(int n);
+
 void send_mes_to_one();
 void send_mes_to_group();
 void send_mes(char mes_recv_name[],int type);
+
 void *show_mes(void *username);
 void print_mes(int id);
 void send_file();
 void *pthread_send_file(void *mes_t);
 void send_file_send(int begin_location,char *file_path);
+
 int file_mes_box();
 void deal_file_mes(int id);
 void mes_sendfile_fail(int id);
 void mes_recv_requir(int id);
 void mes_recvfile_fail(int id);
 void *pthread_recv_file(void *par_t);
+
+//消息记录
 int mes_record();
 void print_mes_record(PACK* pack_t);
+void friend_history();
+void group_history();
+
  
 //界面函数
 int login_menu();

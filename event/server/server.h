@@ -58,6 +58,14 @@
 #define ONLINE     1
 #define BUZY       2
 
+#define MYSQL_NAME "zzy_chat"
+#define MYSQL_USER "root"
+#define MYSQL_PASSWARD "1245215743"
+#define MYSQL_LINK "localhost"
+
+
+
+
 int listenfd,epollfd;//
 short PORT = 4057;//端口号
 int log_file_fd;
@@ -112,6 +120,7 @@ typedef struct datas{
     int      recv_fd;              //接收方fd
     //time_t   time;
     char     mes[MAX_CHAR*2];      //信息
+    char     group_chat[USER_MAX];   //存储群聊时发送消息的人
     //int      *nummber[MAX_CHAR];
 }DATA;
  
@@ -138,24 +147,30 @@ void *pthread_check_file(void *arg);
 void init_server_pthread();
 int read_infor();
 int write_infor();
+
 int conect_mysql_init();
-void mysql_save_message(PACK *recv_pack);
-void mysql_close();
+void mysql_save_group_message(PACK *recv_pack);
+void mysql_close();  
+
 void print_send_pack();
 void print_infor_group();
 void print_infor_user();
 void print_infor_file();
 void my_err(const char * err_string,int line);
+
 int find_userinfor(char username_t[]);
 void signal_close(int i);
 void send_pack(PACK *pack_send_pack_t);
 void send_pack_memcpy_server(int type,char *send_name,char *recv_name,int sockfd1,char *mes);
+
 int passward_judge(int id,char *log_pass);
 int judge_usename_same(char username_t[]);
 void del_friend_infor(int id,char friend_name[]) ;
 void del_group_from_user(char *username,char *groupname);
+
 int find_groupinfor(char groupname_t[]);
 int find_fileinfor(char *filename);
+
 void login(PACK *recv_pack);
 void registe(PACK *recv_pack);
 void send_statu(PACK *recv_pack);
@@ -163,12 +178,14 @@ void friend_add(PACK *recv_pack);
 void friend_add_agree(PACK *recv_pack);
 void friend_del(PACK *recv_pack);
 void send_mes_to_one(PACK *recv_pack);
+
 void group_create(PACK *recv_pack);
 void group_join(PACK *recv_pack);
 void group_qiut(PACK *recv_pack);
 void group_del_one(int id);
 void group_del(PACK *recv_pack);
 void send_mes_to_group(PACK *recv_pack);
+
 void file_recv_begin(PACK *recv_pack);
 void file_recv(PACK *recv_pack);
 void *file_send_send(void *file_send_begin_t);

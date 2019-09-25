@@ -46,6 +46,9 @@ USER_INFOR m_my_infor;
   pthread_mutex_t  mutex_local_user;
   pthread_mutex_t  mutex_recv_file;
 
+int FLAG = 0; 
+
+
 
 //主函数
 int main(int argc, char const *argv[])
@@ -200,15 +203,12 @@ void *clien_recv_thread(void *arg)
                 m_pack_recv_file_mes[++m_recv_num_file_mes]             = pack_t;
                 //printf("\n\nm_pack_recv_file_mes[++m_recv_num_file_mes] 4= %s\n\n",m_pack_recv_file_mes[++m_recv_num_file_mes].data.mes); 
                 break;
-            
-            /* 
             //消息记录
             case MES_RECORD:
                 PACK *pack_record = (PACK *)malloc(sizeof(PACK));
                 memcpy(pack_record,&pack_t,sizeof(PACK));
                 print_mes_record(pack_record);
                 break;
-            */
         }
         //解锁
         pthread_mutex_unlock(&mutex_local_user); 
@@ -292,11 +292,9 @@ int main_menu()
                 //文件消息盒子
                 file_mes_box();
                 break;
-            /*
             case 13:
                 //消息记录
                 mes_record();
-            */
             default:
                 break;
         }
@@ -516,6 +514,7 @@ void print_main_menu()
     printf("        [10]群聊      \n");
     printf("        [11]发文件          \n");
     printf("        [12]文件消息盒子 %d \n",m_recv_num_file_mes);
+    printf("        [13]查看群消息记录\n");
     printf("        [0]退出                 \n");
     printf("*********************************\n");
     printf("选择：");
@@ -834,8 +833,7 @@ void group_del()
     printf("你没有在这个群组中!\n");
 }
  
- 
-/*************************************************/
+//================================================================================================================================
  
 //私聊
 void send_mes_to_one()
@@ -886,7 +884,7 @@ void send_mes_to_group()
     }
  
     m_flag_print_mes = 1;
-    printf("****************************私聊*********************************\n");
+    printf("****************************群聊*********************************\n");
     
     //开启线程显示信息
     pthread_create(&pid,NULL,show_mes,(void *)mes_recv_group_name);
@@ -918,9 +916,11 @@ void send_mes(char mes_recv_name[],int type)
             fflush(stdout);
             fgets(mes,MAX_CHAR,stdin);
         }
- 
+
+        mes[strlen(mes)-1] = '\0';
+
         //当用户输入quit时退出
-        if(strcmp(mes,"quit\n") == 0)
+        if(strcmp(mes,"quit\0") == 0)
             break;
  
         //输入的的同时，输出信息
@@ -981,16 +981,17 @@ void print_mes(int id){
         show_mes_smart(m_pack_recv_chat[id].data.send_name,m_pack_recv_chat[id].data.mes);
     }else{    
         //群聊下依次存入发消息的人的名称
-        for(int i=0;i<SIZE_PASS_NAME;i++){
+        /* for(int i=0;i<SIZE_PASS_NAME;i++){
             group_print_name[i] = m_pack_recv_chat[id].data.mes[i];
-        }
-        show_mes_smart(group_print_name,m_pack_recv_chat[id].data.mes+SIZE_PASS_NAME);
+        } */
+        strcpy(group_print_name,m_pack_recv_chat[id].data.group_chat);
+        show_mes_smart(group_print_name,m_pack_recv_chat[id].data.mes);
     }
 }
  
  
  
-/*******************************************/
+//=============================================================================================================================
 //向服务端请求发送文件，并将文件的大小发送给服务端
  
 void send_file()
@@ -1128,9 +1129,6 @@ void send_file_send(int begin_location,char *file_path)
     printf("send finished!!\n");
     print_main_menu();
 }
- 
- 
- 
 
 //显示文件处理消息，并根据提供选择
 int file_mes_box()
@@ -1164,14 +1162,92 @@ int file_mes_box()
 }
  
 
+int mes_record(){
+    int choice;
+    do{
+        printf("\n******************************消息记录*************************************\n");
+        printf("\t\t\t[1]好友消息\n");
+        printf("\t\t\t[2]群消息\n");
+        printf("\t\t\t[0]退出");
+        printf("\n***************************************************************************\n");
+        fflush(stdin);
+        scanf("%d",&choice);
+        switch (choice)
+        {
+        /* case 1:
+            friend_history();
+            break; */
+        case 2:
+            printf("\n================聊天记录================\n");
+            group_history();
+            break;
+        default:
+            break;
+        }
 
+    }while(choice != 0);
 
+    return 0;
+}
 
+void group_history(){
+    char group_name[MAX_CHAR];
+    
+    //获取群信息
+    //group_mes_get(m_my_infor);
+    
+    
+        printf("***********群组列表*************  \n");
+        //int i;
+        for(int i=1 ;i<=m_my_infor.group_num ;i++){
+            printf("  ID[%d]:       %s", i,m_my_infor.group[i]);
+        }
+        printf("\n\n");
+        printf("*************************************** \n");
+        printf("请输入要查看的群的名称(按 q 退出)：\n");
 
+        fflush(stdin);
+        scanf("%s",group_name);
+        
+        //退出
+        if(strcmp(group_name,"q\0") == 0){
+            return;
+        }
+
+        send_pack(MES_RECORD,m_my_infor.username,"server",group_name);
+
+        printf("请稍等......\n");
+        /* while(FLAG == 1){
+            FLAG = 0;
+            return;
+        } */
+        //sleep(1);
+        //print_mes_record();
+        return ;
+}
+
+void print_mes_record(PACK* pack_t){
+    /* printf("\n================聊天记录================\n"); */
+    printf("%s:\n",pack_t->data.group_chat);
+    printf("%s\n",pack_t->data.mes);
+    return;
+}
 
 
 
  
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
