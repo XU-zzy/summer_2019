@@ -1,5 +1,4 @@
 #include <mysql/mysql.h> 
-//#include <gtk/gtk.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <sys/socket.h>
@@ -13,6 +12,7 @@
 #include <signal.h>
 #include <time.h>
 #include <math.h>
+#include <list.h>
   
 #define LOGIN                    1
 #define REGISTER                 2
@@ -39,6 +39,10 @@
 #define MES_RECORD               23
 #define AGREE                    24
 #define EXIT                     -1
+#define GROUP_RECORD             25
+#define USERS_RECORD             26
+
+
  
 #define FILE_STATU_RECV_ING       1
 #define FILE_STATU_RECV_STOP      2
@@ -66,8 +70,10 @@
 
 
 
-int listenfd,epollfd;//
-short PORT = 4057;//端口号
+int listenfd,epollfd;   //
+
+//端口号
+int PORT = 4057;
 int log_file_fd;
 int user_infor_fd;
 int group_infor_fd;
@@ -78,7 +84,15 @@ pthread_mutex_t  mutex_recv_file;
 pthread_mutex_t  mutex_check_file;
 
 
-
+//用户信息的群组信息
+typedef struct infor_user_group{
+    char group_name[MAX_CHAR];  //群组名
+    int  kind;                  //群中职位 群主 1 ，管理员 2 ，普通成员 3
+    int  num;                   //群组数目
+    int  statue;                //状态
+    int         group_member_num;   //群组人员数目
+    char        group_member_name[USER_MAX][MAX_CHAR];  //群组成员
+}INFOR_USER_GROUP;
  
 // 储存用户信息结构体
 typedef struct infor_user 
@@ -89,18 +103,25 @@ typedef struct infor_user
     int  socket_id;           //用户socketID
     char friends[USER_MAX][MAX_CHAR];// 好友信息
     int  friends_num;                //  好友数量
-    char group[GROUP_MAX][MAX_CHAR];  // 群组信息
-    char group_num;                   //群组数量
+    INFOR_USER_GROUP group[USER_MAX]; // 群组信息
+    int group_num;                //加入群组数量
+    INFO_USER *next;
+    INFO_USER *prev;
 }INFO_USER;
- 
+
 //储存群组信息结构体
 typedef struct infor_group
 {
     char  group_name[MAX_CHAR];  //组名
     int   member_num;            //成员数量
     char  member_name[USER_MAX][MAX_CHAR];  //成员名
+    int   statue[USER_MAX]; //状态
+    int   kind[USER_MAX];   //群中职位 群主 1 ，管理员 2 ，普通成员 3
+    INFO_GROUP *next;
+    INFO_GROUP *prev;
 }INFO_GROUP;
  
+
 //储存文件信息结构体
 typedef struct file_infor
 {
@@ -145,11 +166,11 @@ void *deal(void *recv_pack_t);
 void *serv_send_thread(void *arg);
 void *pthread_check_file(void *arg);
 void init_server_pthread();
-int read_infor();
+int read_users_infor();
 int write_infor();
 
 int conect_mysql_init();
-void mysql_save_group_message(PACK *recv_pack);
+void mysql_save_message(PACK *recv_pack,int flag);
 void mysql_close();  
 
 void print_send_pack();
@@ -185,6 +206,9 @@ void group_qiut(PACK *recv_pack);
 void group_del_one(int id);
 void group_del(PACK *recv_pack);
 void send_mes_to_group(PACK *recv_pack);
+int group_member_find(INFO_GROUP *node);
+
+
 
 void file_recv_begin(PACK *recv_pack);
 void file_recv(PACK *recv_pack);
@@ -195,10 +219,10 @@ void send_record(PACK *recv_pack);
   
  
 //读取在线用户和群主信息
-INFO_USER  user_infor  [USER_MAX];
-int        m_user_num; 
-INFO_GROUP   m_infor_group  [GROUP_MAX]; 
-int          m_group_num;
+INFO_USER  *user_infor;//[USER_MAX];
+int        user_num; 
+INFO_GROUP   *group_infor;//[GROUP_MAX]; 
+int          group_num;
 INFO_FILE    m_infor_file  [FILE_MAX]; 
 int          m_file_num;
  

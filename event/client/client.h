@@ -42,9 +42,10 @@
 #define FILE_RECV_STOP_RP        20
 #define FILE_RECV                21
 #define FILE_FINI_RP             22
-#define MES_RECORD               23
 #define EXIT                     -1
 #define AGREE                    24
+#define GROUP_RECORD             25
+#define USERS_RECORD             26
 
 #define SIZE_PASS_NAME   100
 #define MAX_PACK_CONTIAN 100
@@ -57,7 +58,6 @@
 #define BUZY       2
 
 
-/**************************************************/
   //好友信息
   typedef struct  friend_info
   {
@@ -70,15 +70,23 @@
   }FRIEND_INFO;
 
 
+//用户信息的群组信息
+typedef struct infor_user_group{
+    char group_name[MAX_CHAR];  //群组名
+    int  kind;                  //群中职位 群主 1 ，管理员 2 ，普通成员 3
+    int  num;                   //群组数目
+    int         group_member_num;   //群组人员数目
+    char        group_member_name[USER_MAX][MAX_CHAR];  //群组成员
+    int  statue;
+}INFOR_USER_GROUP;
+
   //用户信息
   typedef struct user_infor{
       char        username    [MAX_CHAR];
       FRIEND_INFO friends     [MAX_CHAR];
       int         friends_num;
-      char        group      [USER_MAX][MAX_CHAR];
       int         group_num;
-      int         group_member_num;
-      char        group_member_name[USER_MAX][MAX_CHAR];
+      INFOR_USER_GROUP group[USER_MAX]; // 群组信息
   }USER_INFOR;
 
 

@@ -204,7 +204,8 @@ void *clien_recv_thread(void *arg)
                 //printf("\n\nm_pack_recv_file_mes[++m_recv_num_file_mes] 4= %s\n\n",m_pack_recv_file_mes[++m_recv_num_file_mes].data.mes); 
                 break;
             //消息记录
-            case MES_RECORD:
+            case GROUP_RECORD:
+            case USERS_RECORD:
                 PACK *pack_record = (PACK *)malloc(sizeof(PACK));
                 memcpy(pack_record,&pack_t,sizeof(PACK));
                 print_mes_record(pack_record);
@@ -378,6 +379,7 @@ void show_mes_smart(char *name  ,char *mes)
 //定义锁参数
 extern pthread_mutex_t  mutex_local_user;
 extern pthread_mutex_t  mutex_recv_file;
+
 //好友列表查看
 void friends_see()
 {
@@ -419,7 +421,7 @@ void group_see()
     printf("***********群组列表*************  \n");
     //int i;
     for(int i=1 ;i<=m_my_infor.group_num ;i++){
-        printf("  ID[%d]:       %s", i,m_my_infor.group[i]);
+        printf("  ID[%d]:       %s\n", i,m_my_infor.group[i]);
     }
     printf("\n\n");
     printf("*************************************** \n");
@@ -514,7 +516,7 @@ void print_main_menu()
     printf("        [10]群聊      \n");
     printf("        [11]发文件          \n");
     printf("        [12]文件消息盒子 %d \n",m_recv_num_file_mes);
-    printf("        [13]查看群消息记录\n");
+    printf("        [13]查看历史消息\n");
     printf("        [0]退出                 \n");
     printf("*********************************\n");
     printf("选择：");
@@ -717,7 +719,7 @@ void del_friend()
     scanf("%s",del_friend_t);
     
     //判断是否添加过该好友
-    if(!judge_same_friend(del_friend_t))
+    if(judge_same_friend(del_friend_t) !=-1 )
     {
         printf("你没有这个好友!\n");
         return ;
@@ -848,7 +850,7 @@ void send_mes_to_one()
     printf("你想私聊的对象：\n");
     scanf("%s",mes_recv_name);
     
-    if (!(id=judge_same_friend(mes_recv_name)))
+    if (id=judge_same_friend(mes_recv_name))
     {
         printf("你没有添加这个好友 !%s\n",mes_recv_name);
         return ;
@@ -956,8 +958,7 @@ void *show_mes(void *username)
                 //输出信息
                 print_mes(id);
                 m_recv_num_chat--;
-                for(int j = id; j <= m_recv_num_chat&&m_recv_num_chat ;j++)
-                {
+                for(int j = id; j <= m_recv_num_chat && m_recv_num_chat ;j++){
                     m_pack_recv_chat[j]  =  m_pack_recv_chat[j+1];
                 }
                 break;
@@ -1162,6 +1163,10 @@ int file_mes_box()
 }
  
 
+
+
+
+//消息记录==============================================================================================================================
 int mes_record(){
     int choice;
     do{
@@ -1174,11 +1179,11 @@ int mes_record(){
         scanf("%d",&choice);
         switch (choice)
         {
-        /* case 1:
+         case 1:
             friend_history();
-            break; */
+            break; 
         case 2:
-            printf("\n================聊天记录================\n");
+            //printf("\n================聊天记录================\n");
             group_history();
             break;
         default:
@@ -1196,7 +1201,7 @@ void group_history(){
     //获取群信息
     //group_mes_get(m_my_infor);
     
-    
+    do{
         printf("***********群组列表*************  \n");
         //int i;
         for(int i=1 ;i<=m_my_infor.group_num ;i++){
@@ -1214,7 +1219,18 @@ void group_history(){
             return;
         }
 
-        send_pack(MES_RECORD,m_my_infor.username,"server",group_name);
+        if(judge_same_group(group_name) == 1){
+            printf("找到群组！\n");
+            break;
+        }else{
+            printf("你没有加入这个群聊 !%s\n",group_name);
+            printf("请重新输入！\n");
+            continue;
+        }
+    
+    }while(strcmp(group_name,"q\0") != 0);
+        
+        send_pack(GROUP_RECORD,m_my_infor.username,"server",group_name);
 
         printf("请稍等......\n");
         /* while(FLAG == 1){
@@ -1225,6 +1241,49 @@ void group_history(){
         //print_mes_record();
         return ;
 }
+
+//好友聊天记录
+void friend_history(){
+    char friend_name[MAX_CHAR];
+    int fid;
+    do{
+        friends_see();
+        printf("请输入要查看的好友的名称(按 q 退出)：\n");
+
+        fflush(stdin);
+        scanf("%s",friend_name);
+        
+        break;
+        /* //退出
+        if(strcmp(friend_name,"q\0") == 0){
+            return;
+        }
+
+        if(judge_same_friend(friend_name) == -1){
+            for(int i = 1;i <= m_my_infor.friends_num;i++){
+                //if(strcmp(m_my_infor.friends[i].name,add_friend_t) == 0)
+                printf("\n%d = %s\n",i,m_my_infor.friends[i].);
+            //return i;
+            }
+            
+            
+            printf("你没有这位好友 !%s\n",friend_name);
+            printf("请重新输入！\n");
+            continue;
+        }else{
+            printf("找到好友！\n");
+            break;
+        } */
+
+    }while(strcmp(friend_name,"q\0") != 0);
+
+    send_pack(USERS_RECORD,m_my_infor.username,"server",friend_name);
+
+    printf("请稍等......\n");
+    
+    return;
+}
+
 
 void print_mes_record(PACK* pack_t){
     /* printf("\n================聊天记录================\n"); */
@@ -1483,7 +1542,6 @@ void file_infor_delete(int id)
 }
  
  
- 
 //判断是否有重复的群聊
 int judge_same_group(char *group_name)
 {
@@ -1496,8 +1554,6 @@ int judge_same_group(char *group_name)
     return 0;
 }
  
- 
- 
 //判断是否有重复的好友
 int judge_same_friend(char add_friend_t[])
 {
@@ -1507,7 +1563,7 @@ int judge_same_friend(char add_friend_t[])
         if(strcmp(m_my_infor.friends[i].name,add_friend_t) == 0)
             return i;
     }
-    return 0;
+    return -1;
 }
  
 //为避免输入时出现的意外错误，进行字符串解析
