@@ -69,45 +69,62 @@
       char name[MAX_CHAR];
   }FRIEND_INFO;
 
-
 //用户信息的群组信息
 typedef struct infor_user_group{
-    char group_name[MAX_CHAR];  //群组名
+    char group_name[20];  //群组名
     int  kind;                  //群中职位 群主 1 ，管理员 2 ，普通成员 3
     int  num;                   //群组数目
-    int         group_member_num;   //群组人员数目
-    char        group_member_name[USER_MAX][MAX_CHAR];  //群组成员
+    int  group_member_num;   //群组人员数目
+    char group_member_name[20][20];  //群组成员
     int  statue;
 }INFOR_USER_GROUP;
 
   //用户信息
   typedef struct user_infor{
-      char        username    [MAX_CHAR];
-      FRIEND_INFO friends     [MAX_CHAR];
+      char        username    [20];
+      FRIEND_INFO friends     [20];
       int         friends_num;
       int         group_num;
-      INFOR_USER_GROUP group[USER_MAX]; // 群组信息
+      INFOR_USER_GROUP group[20]; // 群组信息
   }USER_INFOR;
 
 
-  //和服务端保持一致
-  //包信息
-  typedef struct datas{
-    char     send_name[MAX_CHAR];  //发送方
-    char     recv_name[MAX_CHAR];  //接收方
+
+
+
+
+//和服务端保持一致
+//包信息
+typedef struct datas{
+    char     send_name[20];  //发送方
+    char     recv_name[20];  //接收方
     int      send_fd;              //发送方fd
     int      recv_fd;              //接收方fd
     //time_t   time;
-    char     mes[MAX_CHAR*2];      //信息
-    char     group_chat[USER_MAX];   //存储群聊时发送消息的人
-    //int      *nummber[MAX_CHAR];
+    char     mes[20*2];      //信息
+    char     group_chat[20];   //存储群聊时发送消息的人
+    int      type_2;                //第二标识类型
+    int      mes_int;               //传数字
+    
 }DATA;
 
-  typedef struct package{
-      //包的类型
-      int type;
-      DATA  data;
-  }PACK;
+typedef struct package{
+    int   type;
+    DATA  data;
+    INFOR_USER_GROUP group[10];   //群信息
+    USER_INFOR user[10];         //成员信息
+}PACK;
+
+
+
+
+
+
+
+
+
+
+
 
   typedef struct pthread_parameter
   {
@@ -144,6 +161,8 @@ int send_registe(char username_t[],char password_t[]);
 void registe();
 void get_status_mes();
 void change_statu(PACK pack_deal_statu_t);
+void upadte_friend(PACK pack_t);
+
 
 void add_friend();
 void del_friend();

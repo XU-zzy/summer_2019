@@ -93,7 +93,29 @@ void init()
 }
  
  
-//根据发来数据包及时更新
+int c_count;
+//更新好友状态
+void upadte_friend(PACK pack_t){
+    if(pack_t.data.type_2 == 1){
+        m_my_infor.friends_num = pack_t.data.mes_int;
+        for(int i = 0;i < m_my_infor.friends_num;i++){
+            strcpy(m_my_infor.friends[i].name,pack_t.data.mes);
+            char c = pack_t.data.group_chat[0] - '0';
+            m_my_infor.friends[i].statu = c;
+            printf("======%s\n",m_my_infor.friends[i]);
+        }
+    }
+
+    if(pack_t.data.type_2 == 2){
+        m_my_infor.group_num = pack_t.data.mes_int;
+        for(int i = 0;i < pack_t.data.mes_int;i++){
+            m_my_infor.group[i] = pack_t.group[i];
+        }
+    }
+}
+
+
+/* //根据发来数据包及时更新
 //好友状态
 void *deal_statu(void *arg)
 {
@@ -101,7 +123,7 @@ void *deal_statu(void *arg)
     while(1)
     {
         pthread_mutex_lock(&mutex_local_user); 
-        for(i=1;i<=m_recv_num_friend_see;i++)
+        for(i = 1;i <= m_recv_num_friend_see;i++)
         {
             change_statu(m_pack_recv_friend_see[i]);
         }
@@ -109,7 +131,7 @@ void *deal_statu(void *arg)
         pthread_mutex_unlock(&mutex_local_user); 
         usleep(1); 
     }
-}
+} */
  
  
 //一直接收服务器发来的包
@@ -151,7 +173,9 @@ void *clien_recv_thread(void *arg)
                 break;
             //查看好友
             case FRIEND_SEE:
-                m_pack_recv_friend_see[++m_recv_num_friend_see] = pack_t;
+                //m_pack_recv_friend_see[++m_recv_num_friend_see] = pack_t;
+                c_count = pack_t.data.mes_int;
+                upadte_friend(pack_t);
                 break;
             //创建群聊
             case GROUP_CREATE:
@@ -163,7 +187,8 @@ void *clien_recv_thread(void *arg)
                 break;
             //解散群聊
             case GROUP_DEL:
-                m_flag_group_del    = pack_t.data.mes[0];
+                
+                //m_flag_group_del    = pack_t.data.mes[0];
                 break;
             //私聊
             case CHAT_ONE:
@@ -174,7 +199,6 @@ void *clien_recv_thread(void *arg)
                 m_pack_recv_chat[++m_recv_num_chat]  = pack_t;
                 break;
             
-
             //case SEND_FILE:
               //  m_pack_recv_send_file[++m_recv_num_send_file]   = pack_t;
                 //break; 
@@ -206,10 +230,13 @@ void *clien_recv_thread(void *arg)
             //消息记录
             case GROUP_RECORD:
             case USERS_RECORD:
-                PACK *pack_record = (PACK *)malloc(sizeof(PACK));
+                {
+                PACK *pack_record;
+                pack_record = (PACK *)malloc(sizeof(PACK));
                 memcpy(pack_record,&pack_t,sizeof(PACK));
                 print_mes_record(pack_record);
                 break;
+                }
         }
         //解锁
         pthread_mutex_unlock(&mutex_local_user); 
@@ -222,7 +249,7 @@ void *clien_recv_thread(void *arg)
 void init_clien_pthread()
 {
     pthread_t pid_deal_statu,pid_recv,pid_recv_file;
-    //收包处理线程
+    //更新状态收包处理线程
     pthread_create(&pid_deal_statu,NULL,deal_statu,NULL);
     //实时接收包线程
     pthread_create(&pid_recv,NULL,clien_recv_thread,NULL);
@@ -259,7 +286,7 @@ int main_menu()
                 break;
             case 4:
                 //查看群组
-                group_see();
+                //group_see();
                 break;
             case 5:
                 //创建群组
@@ -385,7 +412,7 @@ void friends_see()
 {
     pthread_mutex_lock(&mutex_local_user);
     printf("***********好友列表*************\n");
-    for(int i=1 ;i<=m_my_infor.friends_num ;i++){
+    for(int i=0 ;i < m_my_infor.friends_num ;i++){
         switch(m_my_infor.friends[i].statu){
            case ONLINE:
                 printf("  ID[%d]:       %s [ONLINE] ", i,m_my_infor.friends[i].name);
@@ -396,6 +423,7 @@ void friends_see()
                     printf("\n");
                 break;
            case DOWNLINE:
+                printf("\n---%d\n",m_my_infor.friends_num);
                 printf("\n  ID[%d]:     %s [DOWNLINE] ", i,m_my_infor.friends[i].name);
                 if(m_my_infor.friends[i].mes_num)
                     printf("%d messages\n", m_my_infor.friends[i].mes_num);
@@ -410,7 +438,7 @@ void friends_see()
 }
  
 
-//群组信息查看
+/* //群组信息查看
 void group_see()
 {
     pthread_mutex_lock(&mutex_local_user);
@@ -425,7 +453,7 @@ void group_see()
     }
     printf("\n\n");
     printf("*************************************** \n");
-    /*int choice;
+    int choice;
     do{
         printf("[1]查看群成员\t[2]退出\n");
         fflush(stdin);
@@ -440,7 +468,7 @@ void group_see()
         }
 
     }while(choice != 2 && choice != 1);
-    */
+   
     pthread_mutex_unlock(&mutex_local_user);  
 }
 
@@ -472,7 +500,7 @@ void group_member_see(){
 
 void get_group_member(int n){
 
-}
+} */
 
 
 
@@ -631,7 +659,7 @@ void get_status_mes()
     }
 }
  
-//根据服务端发送来的包，利用字符串解析，更新当前好友状态
+/* //根据服务端发送来的包，利用字符串解析，更新当前好友状态
 void change_statu(PACK pack_deal_statu_t)
 {
     int count = 0;
@@ -660,7 +688,7 @@ void change_statu(PACK pack_deal_statu_t)
         }
         count += SIZE_PASS_NAME;
     }
-}
+} */
  
 
 //添加好友
@@ -763,7 +791,7 @@ void group_join()
     //判断是否已经加入该群
     for(int i=1;i <= m_my_infor.group_num ;i++)
     {
-        if(strcmp(m_my_infor.group[i],group_name) == 0)
+        if(strcmp(m_my_infor.group[i].group_name,group_name) == 0)
         {
             printf("你已经加入该群组!\n");
             return ;
@@ -794,7 +822,7 @@ void group_qiut()
     //判断是否添加过该群组
     for(int i=1;i <= m_my_infor.group_num ;i++)
     {
-        if(strcmp(m_my_infor.group[i],group_name) == 0)
+        if(strcmp(m_my_infor.group[i].group_name,group_name) == 0)
         {
             send_pack(GROUP_QIUT,m_my_infor.username,"server",group_name);
             printf("退出 %s 成功!\n",group_name);
@@ -815,7 +843,7 @@ void group_del()
     
     for(int i=1;i <= m_my_infor.group_num ;i++)
     {
-        if(strcmp(m_my_infor.group[i],group_name) == 0)
+        if(strcmp(m_my_infor.group[i].group_name,group_name) == 0)
         {
             send_pack(GROUP_DEL,m_my_infor.username,"server",group_name);
             
@@ -876,7 +904,7 @@ void send_mes_to_group()
 {
     pthread_t pid;
     char mes_recv_group_name[MAX_CHAR];
-    group_see();
+    //group_see();
     printf("请输入群聊名称\n");
     scanf("%s",mes_recv_group_name);
     if (!judge_same_group(mes_recv_group_name))
@@ -1548,7 +1576,7 @@ int judge_same_group(char *group_name)
     int i;
     for(i=1;i<=m_my_infor.group_num;i++)
     {
-        if(strcmp(m_my_infor.group[i],group_name) == 0)
+        if(strcmp(m_my_infor.group[i].group_name,group_name) == 0)
             return 1;
     }
     return 0;
