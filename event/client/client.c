@@ -36,9 +36,9 @@ USER_INFOR m_my_infor;
   //定义套接字，IP，端口
   int sockfd;
 
-  /* char *IP = "192.168.1.43"; */
+  char *IP = "192.168.1.43";
   /* char *IP = "192.168.3.210"; */
-  char *IP = "192.168.122.1";
+  /* char *IP = "192.168.122.1"; */
   short PORT = 4057;
   typedef struct sockaddr SA; 
 
@@ -47,6 +47,10 @@ USER_INFOR m_my_infor;
   pthread_mutex_t  mutex_recv_file;
 
 int FLAG = 0; 
+
+//-----------------------------------------
+int send_registe_flag = -1;
+int send_login_flag = -1;
 
 
 
@@ -95,24 +99,25 @@ void init()
 }
  
  
-int c_count;
 //更新好友状态
 void upadte_friend(PACK pack_t){
     char name[20];;
     strcpy(name,m_my_infor.username);
     
-    //好友s
+    //好友数目
     m_my_infor.friends_num = pack_t.data.mes_int;
     //printf(" members  === %d\n",m_my_infor.friends_num);
 
-    
+    //更新好友名称
     for(int i = 0;i < pack_t.data.mes_int;i++){
         strcpy(m_my_infor.friends[i].name,pack_t.data.mes_2[i]);
-        m_my_infor.friends_num = pack_t.data.mes_2_st[i];
+        //好友状态
+        m_my_infor.friends[i].statu = pack_t.data.mes_2_st[i];
         //printf(" friend = %s %c %d\n",pack_t.data.mes_2[i],pack_t.data.mes[0],i);
         //printf(" friend_t = %s %d %d\n",m_my_infor.friends[i].name,m_my_infor.friends[i].statu,i);
     }
     //printf(" friend = %s %d \n",m_my_infor.friends[2].name,m_my_infor.friends[2].statu);
+    //好友数目
     m_my_infor.friends_num = pack_t.data.mes_int;
     //printf(" members  === %d\n",m_my_infor.friends_num);
     strcpy(m_my_infor.username,name);
@@ -190,6 +195,10 @@ void *clien_recv_thread(void *arg)
         {
             case 0:
                 break;
+            /* case LOGIN:
+                send_login_flag = pack_t.data.mes_int;
+                printf("send_login_flag = %d\n",send_login_flag);
+                break; */
             //添加好友提醒
             case AGREE:
                 m_pack_recv_friend_add_agree = pack_t;
@@ -386,6 +395,189 @@ int login_menu(){
     return 0;
 }
  
+
+
+
+
+//主菜单 
+void print_main_menu()
+{
+    printf("\n********************************* \n");
+    printf("        [1]显示好友       \n");
+    printf("        [2]添加好友       \n");
+    printf("        [3]删除好友       \n");
+    printf("        [4]显示群组         \n");
+    printf("        [5]创建群组         \n");
+    printf("        [6]加入群组         \n");
+    printf("        [7]退出群组         \n");
+    printf("        [8]解散群组         \n");
+    printf("        [9]私聊        \n");
+    printf("        [10]群聊      \n");
+    printf("        [11]发文件          \n");
+    printf("        [12]文件消息盒子 %d \n",m_recv_num_file_mes);
+    printf("        [13]查看历史消息\n");
+    printf("        [0]退出                 \n");
+    printf("*********************************\n");
+    printf("选择：");
+}
+
+
+//功能函数--------------------------------------------------------------------------------------------------------------------------
+//向服务端发送登陆信息
+int send_login(char username_t[],char password_t[])
+{
+    PACK recv_login_t;
+    //printf("1=======\n");
+    //发送包
+    send_pack(LOGIN,username_t,"server",password_t);
+    
+    //printf("2=======\n");
+    
+    if(recv(sockfd,&recv_login_t,sizeof(PACK),0) < 0){
+        my_err("recv",__LINE__);
+    }
+    //printf("3=======\n");
+    
+    printf("wait......\n");
+    sleep(1);
+    //接收服务器返回的登录消息
+    int login_judge_flag = recv_login_t.data.mes_int;
+    //printf("---------recv_login_t.data.mes_int = %d\n",login_judge_flag);
+    return login_judge_flag;
+}
+ 
+
+//根据输入信息向客户端发送登陆请求
+//并根据返回内容，提示用户
+int login()
+{
+    int login_flag = 0;
+    char username_t [MAX_CHAR];
+    char password_t [MAX_CHAR];
+    
+    printf("请输入用户名:\n");
+    scanf("%s",username_t);
+    printf("请输入密码：\n");
+    scanf("%s",password_t);
+    //printf("0=======\n");
+    int flag = send_login(username_t,password_t);
+    
+    //printf("--------------------------------------%d\n",flag);
+
+    if(flag ==  2){
+        printf("用户未注册.\n");
+        return 0;
+    }   
+    if(flag ==  3 ){
+        printf("用户已登录 .\n");
+        return 0;
+    }  
+    if(flag ==  0) {
+        printf("密码不匹配.\n");
+        return 0;
+    }
+    
+    //初始化当前登录用户名
+    strcpy(m_my_infor.username,username_t);
+    printf("登陆成功\n");
+    return 1;
+}
+ 
+//向服务端发送注册信息
+//成功返回1
+int send_registe(char username_t[],char password_t[])
+{
+    PACK recv_registe_t;
+    
+    send_pack(REGISTER,username_t,"server",password_t);
+    
+    if(recv(sockfd,&recv_registe_t,sizeof(PACK),0) < 0){
+        my_err("recv",__LINE__);
+    }
+    
+    printf("wait......\n");
+    sleep(1);
+
+    return recv_registe_t.data.mes_int;
+}
+ 
+//根据输入信息向客户端发送注册请求
+//并根据返回内容，提示用户
+void registe()
+{
+    int flag = 0;
+    flag = REGISTER;
+    char username_t[MAX_CHAR];
+    char password_t[MAX_CHAR];
+    
+    printf("注册账号:\n");
+    scanf("%s",username_t);
+    printf("注册密码:\n");
+    scanf("%s",password_t);
+    if(send_registe(username_t,password_t))
+        printf("成功!\n");
+    else 
+        printf("姓名重复\n");
+}  
+ 
+
+//向服务端请求更新好友状态
+void get_status_mes()
+{
+    PACK pack_friend_see;
+    pack_friend_see.type = FRIEND_SEE;
+    
+    strcpy(pack_friend_see.data.send_name,m_my_infor.username);
+    printf("send name : %s\n",m_my_infor.username);
+    strcpy(pack_friend_see.data.recv_name,"server");
+    memset(pack_friend_see.data.mes,0,sizeof(pack_friend_see.data.mes));
+    
+    if(send(sockfd,&pack_friend_see,sizeof(PACK),0) < 0){
+        my_err("send",__LINE__);
+    }
+}
+ 
+//根据服务端发送来的包，利用字符串解析，更新当前好友状态
+void change_statu(PACK pack_deal_statu_t)
+{
+    int count = 0;
+    m_my_infor.friends_num=pack_deal_statu_t.data.mes[count++];
+    
+    printf("SAdasdas\n");
+    //更新好友信息
+    for(int i=1; i <= m_my_infor.friends_num ;i++)
+    {
+        for(int j=0;j<SIZE_PASS_NAME;j++)
+        {
+            if(j == 0)   
+                m_my_infor.friends[i].statu = pack_deal_statu_t.data.mes[count+j] - 48;
+            else
+                m_my_infor.friends[i].name[j-1] = pack_deal_statu_t.data.mes[count+j];
+        }
+        count += SIZE_PASS_NAME;
+    }
+    
+    //更新群组信息
+    m_my_infor.group_num=pack_deal_statu_t.data.mes[count++];
+    for(int i=1 ;i <= m_my_infor.group_num ;i++)
+    {
+        for(int j=0;j<SIZE_PASS_NAME;j++)
+        {
+            //m_my_infor.  group[i][j] = pack_deal_statu_t.data.mes[count+j];
+        }
+        count += SIZE_PASS_NAME;
+    }
+}
+
+
+
+
+
+
+
+
+
+
 //显示聊天信息
 void show_mes_smart(char *name  ,char *mes)
 {
@@ -556,169 +748,7 @@ void group_member_see(){
 
 
  
-//主菜单 
-void print_main_menu()
-{
-    printf("\n********************************* \n");
-    printf("        [1]显示好友       \n");
-    printf("        [2]添加好友       \n");
-    printf("        [3]删除好友       \n");
-    printf("        [4]显示群组         \n");
-    printf("        [5]创建群组         \n");
-    printf("        [6]加入群组         \n");
-    printf("        [7]退出群组         \n");
-    printf("        [8]解散群组         \n");
-    printf("        [9]私聊        \n");
-    printf("        [10]群聊      \n");
-    printf("        [11]发文件          \n");
-    printf("        [12]文件消息盒子 %d \n",m_recv_num_file_mes);
-    printf("        [13]查看历史消息\n");
-    printf("        [0]退出                 \n");
-    printf("*********************************\n");
-    printf("选择：");
-}
 
-
-//功能函数--------------------------------------------------------------------------------------------------------------------------
-//向服务端发送登陆信息
-int send_login(char username_t[],char password_t[])
-{
-    PACK recv_login_t;
-    int login_judge_flag = 0;
-    
-    //发送包
-    send_pack(LOGIN,username_t,"server",password_t);
-     
-    if(recv(sockfd,&recv_login_t,sizeof(PACK),0) < 0){
-        my_err("recv",__LINE__);
-    }
-    
-    //接收服务器返回的登录消息
-    login_judge_flag = recv_login_t.data.mes[0] - 48;
-    //printf("---------recv_login_t.data.mes[0] = %d\n",recv_login_t.data.mes[0]);
-    return login_judge_flag;
-}
- 
-
-//根据输入信息向客户端发送登陆请求
-//并根据返回内容，提示用户
-int login()
-{
-    int login_flag = 0;
-    char username_t [MAX_CHAR];
-    char password_t [MAX_CHAR];
-    
-    printf("请输入用户名:\n");
-    scanf("%s",username_t);
-    printf("请输入密码：\n");
-    scanf("%s",password_t);
- 
-    login_flag = send_login(username_t,password_t);
-    
-    //printf("--------------------------------------%d\n",login_flag);
-
-    if(login_flag ==  2){
-        printf("用户未注册.\n");
-        return 0;
-    }   
-    if(login_flag ==  3 ){
-        printf("用户已登录 .\n");
-        return 0;
-    }  
-    if(login_flag ==  0) {
-        printf("密码不匹配.\n");
-        return 0;
-    }
-    
-    //初始化当前登录用户名
-    strcpy(m_my_infor.username,username_t);
-    printf("登陆成功\n");
-    return 1;
-}
- 
-//向服务端发送注册信息
-//成功返回0
-int send_registe(char username_t[],char password_t[])
-{
-    PACK recv_registe_t;
-    int send_registe_flag;
-    
-    send_pack(REGISTER,username_t,"server",password_t);
-    
-    if(recv(sockfd,&recv_registe_t,sizeof(PACK),0) < 0){
-        my_err("recv",__LINE__);
-    }
-    
-    send_registe_flag = recv_registe_t.data.mes[0] - 48;
-    return send_registe_flag;
-}
- 
-//根据输入信息向客户端发送注册请求
-//并根据返回内容，提示用户
-void registe()
-{
-    int flag = 0;
-    flag = REGISTER;
-    char username_t[MAX_CHAR];
-    char password_t[MAX_CHAR];
-    
-    printf("注册账号:\n");
-    scanf("%s",username_t);
-    printf("注册密码:\n");
-    scanf("%s",password_t);
-    if(send_registe(username_t,password_t))
-        printf("成功!\n");
-    else 
-        printf("姓名重复\n");
-}  
- 
-//向服务端请求更新好友状态
-void get_status_mes()
-{
-    PACK pack_friend_see;
-    pack_friend_see.type = FRIEND_SEE;
-    
-    strcpy(pack_friend_see.data.send_name,m_my_infor.username);
-    printf("send name : %s\n",m_my_infor.username);
-    strcpy(pack_friend_see.data.recv_name,"server");
-    memset(pack_friend_see.data.mes,0,sizeof(pack_friend_see.data.mes));
-    
-    if(send(sockfd,&pack_friend_see,sizeof(PACK),0) < 0){
-        my_err("send",__LINE__);
-    }
-}
- 
-//根据服务端发送来的包，利用字符串解析，更新当前好友状态
-void change_statu(PACK pack_deal_statu_t)
-{
-    int count = 0;
-    m_my_infor.friends_num=pack_deal_statu_t.data.mes[count++];
-    
-    printf("SAdasdas\n");
-    //更新好友信息
-    for(int i=1; i <= m_my_infor.friends_num ;i++)
-    {
-        for(int j=0;j<SIZE_PASS_NAME;j++)
-        {
-            if(j == 0)   
-                m_my_infor.friends[i].statu = pack_deal_statu_t.data.mes[count+j] - 48;
-            else
-                m_my_infor.friends[i].name[j-1] = pack_deal_statu_t.data.mes[count+j];
-        }
-        count += SIZE_PASS_NAME;
-    }
-    
-    //更新群组信息
-    m_my_infor.group_num=pack_deal_statu_t.data.mes[count++];
-    for(int i=1 ;i <= m_my_infor.group_num ;i++)
-    {
-        for(int j=0;j<SIZE_PASS_NAME;j++)
-        {
-            //m_my_infor.  group[i][j] = pack_deal_statu_t.data.mes[count+j];
-        }
-        count += SIZE_PASS_NAME;
-    }
-}
  
 
 //添加好友
