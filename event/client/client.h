@@ -158,6 +158,7 @@ void registe();
 void get_status_mes();
 void change_statu(PACK pack_deal_statu_t);
 void upadte_friend(PACK pack_t);
+void update_friend(PACK pack_t);
 
 
 void add_friend();

@@ -206,6 +206,10 @@ void *deal(void *recv_pack_t)
             send_statu(recv_pack);
             //printf("\n--------------------\n");
             break;
+        //查看群组
+        case GROUP_SEE:
+            printf("=====group\n");
+            send_group_statu(recv_pack);
         //添加好友
         case FRIEND_ADD:
             friend_add(recv_pack);
@@ -284,7 +288,8 @@ void *serv_send_thread(void *arg)
         user_statu = DOWNLINE;
 
         //m_send_num发送包数目
-        for(i = m_send_num-1;i>=0;i--)
+        //for(i = m_send_num-1;i>=0;i--)
+        for(i = 0;i < m_send_num;i++)
         {
             INFO_USER *p_user = user_infor;
             for(int j =1; j <= user_num ;j++)
@@ -307,6 +312,7 @@ void *serv_send_thread(void *arg)
             if(user_statu == ONLINE || m_pack_send[i].type == LOGIN || m_pack_send[i].type == REGISTER)
             {
                 
+                //usleep(1000);
                 if(user_statu == ONLINE)
                     recv_fd_t = recv_fd_online;
                 else
@@ -469,9 +475,6 @@ void init_server_pthread()
     //pthread_create(&pid_file_check,NULL,pthread_check_file,NULL);
 } 
  
-
-
-
 //功能函数========================================================================================================================
 //跟据收到包的内容，找到登录者的信息
 void login(PACK *recv_pack)
@@ -483,67 +486,54 @@ void login(PACK *recv_pack)
     
     p = find_userinfor(recv_pack->data.send_name);
     
-    //printf("======%s %d \n",p->username,p->statu);
-    
     if(p == NULL){
         //没有注册
-        //printf("------------------------------1");
-        //login_flag[0] = '2';
         recv_pack->data.mes_int = 2;
         printf("========\n");
-    }
-    else if (p->statu == ONLINE)
-    {
-        //printf("------------------------------2");
+    }else if (p->statu == ONLINE){
         //已登录
-        login_flag[0] = '3';
-        login_flag[1] = '\0';
+
         printf("已经登陆过!\n");
-        //strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
+        
+        //发送信息
         strcpy(recv_pack->data.send_name,"server");
-        //strcpy(recv_pack->data.mes,login_flag);
         recv_pack->data.mes_int = 3;
         recv_pack->data.recv_fd = recv_pack->data.send_fd;
         recv_pack->data.send_fd = listenfd;
+        
         send_pack(recv_pack);
         return ;
-    }
-    else if(strcmp(p->password,recv_pack->data.mes) == 0){
-        //printf("------------------------------3");
+    }else if(strcmp(p->password,recv_pack->data.mes) == 0){
         //登录成功
-        //login_flag[0] = '1';
-        //change user infor
         recv_pack->data.mes_int = 1;
 
         p->socket_id = recv_pack->data.send_fd;
-        p->statu = ONLINE;
+        //p->statu = ONLINE;
         printf("\n\n********登录**********\n");
         printf(" %s 登陆成功!\n", p->username);
         printf(" statu:    %d\n", p->statu); 
         printf(" socket_id:%d\n\n",p->socket_id);
         
-        //考虑到中间的数据传输耗时，停顿若干时间，再修改状态
-        usleep(10);
-        if(recv_pack->data.mes_int == 1)
-            p->statu = ONLINE;
-    }   
-      
-    else
+        //修改状态
+        //usleep(10000);
+        
+    }else{
         //密码不匹配
-        recv_pack->data.mes_int = 0;
-    /*printf("%s\n", recv_pack->data.send_name);
-    printf("%s\n", recv_pack->data.mes);
-    printf("%d\n", m_user_num); */    
+        recv_pack->data.mes_int = 0; 
+    }
     
     //包信息赋值
     strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
     strcpy(recv_pack->data.send_name,"server");
-    //strcpy(recv_pack->data.mes,login_flag);
     recv_pack->data.recv_fd = recv_pack->data.send_fd;
     recv_pack->data.send_fd = listenfd;
     
     //发送包
     send_pack(recv_pack);
+    
+    usleep(1000);
+    if(recv_pack->data.mes_int == 1)
+            p->statu = ONLINE;
     
     free(recv_pack);
     return ;
@@ -575,7 +565,6 @@ void registe(PACK *recv_pack)
     send_pack(recv_pack);
     free(recv_pack);
 }
- 
 
 //添加用户
 int registe_new_user(char username_t[],char passward_t[]){
@@ -602,18 +591,10 @@ int registe_new_user(char username_t[],char passward_t[]){
     return 1;
 }
 
-
-
-
-
-
-
- 
 //把该客户端的朋友信息返回给客户端
 //查看好友
-void send_statu(PACK *recv_pack)
-{
-    //printf("----------------send begin!\n");
+void send_statu(PACK *recv_pack){
+
     char recv_name[MAX_CHAR];
     char name_t[MAX_CHAR];
     char send_statu_mes[MAX_CHAR*2];
@@ -625,48 +606,29 @@ void send_statu(PACK *recv_pack)
     
     //寻找用户
     p = find_userinfor(recv_pack->data.send_name);
-    //send_statu_mes[count++] = p->friends_num;
     
     //储存发送方用户为接收用户
     strcpy(recv_name,recv_pack->data.send_name);
-    
 
-    
-    //好友信息
-    //好友数目
-    //recv_pack->user.friends_num = p->friends_num;
-    //strcpy(recv_pack->user.username,recv_pack->data.recv_name);
-    //printf("===========%d\n",recv_pack->user.friends_num);
-    
-    //打印好友
-    for(int i = 0;i < 2;i++){
-        printf("------------%s-----%d----------\n",p->friends[i],p->friends_num);
-    }
-    
     for(int i = 0;i < p->friends_num;i++){
         //好友名称
         strcpy(recv_pack->data.mes_2[i],p->friends[i]);
         //找不到该好友，退出
         if((q = find_userinfor(p->friends[i]))== NULL){
-            //printf("\ni = %d\n",i);
             break;
         }
         //好友状态状态
         recv_pack->data.mes_2_st[i] = q->statu;
-        //printf("-------------user %s  friend %d %s\n",recv_pack->data.send_name,i,recv_pack->data.mes_2[i]);
+        printf("------------%s-----%d-------%d---\n",p->friends[i],p->friends_num,p->statu);
     }
     
     //储存好友数目
     recv_pack->data.mes_int = p->friends_num;
 
-    printf("aaaaaaaaaaaaaaaaaaaaa%d\t,%d\n",recv_pack->data.mes_int,p->friends_num);
     for(int i = 0;i < recv_pack->user.friends_num;i++){
         printf("\n%d    %s  \n",recv_pack->user.friends[i].statu,recv_pack->user.friends[i].name);
     }
-    
-    
-    
-    //recv_pack->data.mes_int = 99;
+
     //发送包
     strcpy(recv_pack->data.send_name,"server");
     strcpy(recv_pack->data.recv_name,recv_name);
@@ -677,7 +639,52 @@ void send_statu(PACK *recv_pack)
     //释放包
     free(recv_pack);
 }
- 
+
+//查看群组
+void send_group_statu(PACK *recv_pack){
+    INFO_USER *p = user_infor;
+
+    p = find_userinfor(recv_pack->data.send_name);
+
+    recv_pack->data.mes_int = p->group_num;
+
+    for(int i = 0;i < p->group_num;i++){
+        //群名
+        strcpy(recv_pack->data.mes_2[i],p->group[i].group_name);
+        //群组人数
+        recv_pack->data.mes_2_st[i] = p->group[i].group_member_num;
+
+        printf("\n%s------%d---\n",recv_pack->data.mes_2[i],recv_pack->data.mes_2_st[i]);
+    }
+    
+    //发送包
+    strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
+    strcpy(recv_pack->data.send_name,"server");
+    recv_pack->data.recv_fd = recv_pack->data.send_fd;
+    recv_pack->data.send_fd = listenfd;
+    send_pack(recv_pack);
+
+    //释放包
+    free(recv_pack);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 //跟据收到包的内容，添加好友
@@ -689,23 +696,23 @@ void friend_add_agree(PACK *recv_pack)
     //寻早用户id
     
     p_own = find_userinfor(recv_pack->data.send_name);
-    
-    strcpy(p_own->friends[++(p_own->friends_num)],recv_pack->data.mes);
-    
     p_friend = find_userinfor(recv_pack->data.mes);
     
-    strcpy(p_friend->friends[++(p_friend->friends_num)],recv_pack->data.send_name);
+    strcpy(p_own->friends[(p_own->friends_num)++],p_friend->username);
+
+    strcpy(p_friend->friends[(p_friend->friends_num)++],p_own->username);
     
     free(recv_pack);
 }
 
 //请求添加
 void friend_add(PACK *recv_pack){
-    
-    char *mes = recv_t_add_agree.data.send_name;
     strcpy(recv_pack->data.recv_name,recv_pack->data.mes);
+    
+    strcpy(recv_pack->data.mes,recv_pack->data.send_name);
+    
     strcpy(recv_pack->data.send_name,"server");
-    memcpy(recv_pack->data.mes,mes,MAX_CHAR*2);
+    
     recv_pack->type = AGREE;
     recv_pack->data.recv_fd = recv_pack->data.send_fd;
     recv_pack->data.send_fd = listenfd;
@@ -722,28 +729,16 @@ void friend_del(PACK *recv_pack)
     INFO_USER *p_friend,*p_friend_1;
     
     p_own = find_userinfor(recv_pack->data.send_name);
-    
     del_friend_infor(p_own,recv_pack->data.mes); 
     
     p_friend = find_userinfor(recv_pack->data.mes);
-    
-    printf("friend_name == %s\n",p_friend->username);
-    
     del_friend_infor(p_friend,recv_pack->data.send_name); 
     
     free(recv_pack);
 }
  
-//发送信息，并存储
-void send_mes_to_one(PACK *recv_pack)
-{
-    //存储到数据库
-    mysql_save_message(recv_pack,USERS_RECORD);
-    //printf("--------------------sssssssssssssssssssss-----------------------------\n");
-    send_pack(recv_pack);
-    free(recv_pack);
-}
- 
+
+
 //创建群
 void group_create(PACK *recv_pack)
 {
@@ -910,6 +905,17 @@ void group_del(PACK *recv_pack)
     free(recv_pack);
 }
  
+ 
+//私聊
+//发送信息，并存储
+void send_mes_to_one(PACK *recv_pack)
+{
+    //存储到数据库
+    mysql_save_message(recv_pack,USERS_RECORD);
+    printf("--------------------sssssssssssssssssssss-----------------------------\n");
+    send_pack(recv_pack);
+    free(recv_pack);
+}
 
 //群聊
 //跟据收到包的内容，利用循环给群成员每一个人都发一遍，并存储到mysql数据库
@@ -1517,7 +1523,6 @@ int write_infor()
 //mysql保存聊天记录数据
 void mysql_save_message(PACK *recv_pack,int flag){
     if(flag == GROUP_RECORD){
-        //#ifdef MYSQL_OPEN
         sprintf(command, "insert into zzy_chat_group_history values ('%s','%s','%s')",
         recv_pack->data.send_name,recv_pack->data.recv_name,recv_pack->data.mes);
     }else if(flag == USERS_RECORD){
@@ -1535,8 +1540,6 @@ void mysql_save_message(PACK *recv_pack,int flag){
         }
     
         printf("the message get into the mysql!!!\n");
-        //#else
-        //#endif
 }
 
 //客户端请求历史记录，通过查询，把mysql数据库中的信息导出，发送给客户端
@@ -1679,7 +1682,7 @@ INFO_USER *find_userinfor(char username_t[])
         return NULL;
     for(i = 0;i < user_num;i++)
     {
-        printf("i = %d\t",i);
+        //printf("\ni = %d\t",i);
         if(p == NULL){
             return NULL;
         }
@@ -1687,7 +1690,7 @@ INFO_USER *find_userinfor(char username_t[])
         if(strcmp(p->username,username_t) == 0)
             return p;
         p = p->next;
-        printf("i_2 = %d\n",i);
+        //printf("\ni_2 = %d\n",i);
     }
         return NULL;
 }
@@ -1774,9 +1777,11 @@ int del_friend_infor(INFO_USER *p,char friend_name[])
             break;
         }
     }
-        for(int i = id_1;i < p->friends_num;i++){
-            strcpy(p->friends[i],p->friends[i+1]);
-        }
+    //前移    
+    for(int i = id_1;i < p->friends_num;i++){
+        strcpy(p->friends[i],p->friends[i+1]);
+    }
+    
     p->friends_num--;
 }
  

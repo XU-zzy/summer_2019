@@ -236,6 +236,8 @@ void login(PACK *recv_pack);
 void registe(PACK *recv_pack);
 int registe_new_user(char username_t[],char passward[]);
 void send_statu(PACK *recv_pack);
+void send_group_statu(PACK *recv_pack);
+
 void friend_add(PACK *recv_pack);
 void friend_add_agree(PACK *recv_pack);
 void friend_del(PACK *recv_pack);
