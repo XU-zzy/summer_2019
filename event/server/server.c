@@ -97,6 +97,10 @@ int main()
                 
                 recv_t_add_agree.data.send_fd = events[i].data.fd;
                 
+                /* if(recv_t_add_agree.type == 0){
+                    continue;
+                } */
+
                 //输出收到的包信息
                 printf("\n\n\n ******接收包信息******\n");
                 printf(" type     : %d\n", recv_t_add_agree.type);
@@ -188,7 +192,9 @@ void *deal(void *recv_pack_t)
             break;
         //查看好友
         case FRIEND_SEE:
+            //printf("\n================\n");
             send_statu(recv_pack);
+            //printf("\n--------------------\n");
             break;
         //添加好友
         case FRIEND_ADD:
@@ -320,6 +326,7 @@ void *serv_send_thread(void *arg)
                 printf(" recv_fd : %d\n",m_pack_send[i].data.recv_fd);
                 printf(" group_chat:%s\n",m_pack_send[i].data.group_chat);
                 printf(" mes_int   :%d\n", m_pack_send[i].data.mes_int);
+                printf(" friends num %d\n",m_pack_send[i].user.friends_num);
                 m_send_num-- ;
                 printf(" pack left Now is:%d\n\n", m_send_num);
                 
@@ -460,66 +467,63 @@ void init_server_pthread()
 void login(PACK *recv_pack)
 {
     int id=0;
+    char login_flag[10];
+    
     INFO_USER *p;
-    char c[5];
- 
-    if((p = find_userinfor(recv_pack->data.send_name)) == 0){
+    
+    p = find_userinfor(recv_pack->data.send_name);
+    
+    printf("======%s %d\n",p->username,p->statu);
+
+    if(p == NULL){
         //没有注册
         //printf("------------------------------1");
-        c[0] = '2';
+        login_flag[0] = '2';
     }
-    else if (user_infor[id].statu == ONLINE)
+    else if (p->statu == ONLINE)
     {
         //printf("------------------------------2");
         //已登录
-        c[0] = '3';
+        login_flag[0] = '3';
  
     }
     else if(strcmp(p->password,recv_pack->data.mes) == 0){
         //printf("------------------------------3");
         //登录成功
-        c[0] = '1';
+        login_flag[0] = '1';
         //change user infor
         
         p->socket_id = recv_pack->data.send_fd;
-        
+        p->statu = ONLINE;
         printf("\n\n********登录**********\n");
-        printf(" %s 登陆成功!\n", user_infor[id].username);
-        printf(" 密码: %s\n",user_infor[id].password);
-        printf(" statu:    %d\n", user_infor[id].statu); 
-        printf(" socket_id:%d\n\n",user_infor[id].socket_id);
-        
+        printf(" %s 登陆成功!\n", p->username);
+        printf(" statu:    %d\n", p->statu); 
+        printf(" socket_id:%d\n\n",p->socket_id);
     }   
       
-    else{
+    else
         //密码不匹配
-        c[0] = '0';
-        //printf("===========================================================================\n");
-        //printf("%s登录失败，密码是%s\n",user_infor[id].username,user_infor[id].password);
-    }
-    c[1] = '\0';
+        login_flag[0] = '0';
+    login_flag[1] = '\0';
     /*printf("%s\n", recv_pack->data.send_name);
     printf("%s\n", recv_pack->data.mes);
-    printf("%d\n", user_num); */    
-    
+    printf("%d\n", m_user_num); */    
     
     //包信息赋值
     strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
     strcpy(recv_pack->data.send_name,"server");
-    strcpy(recv_pack->data.mes,c);
+    strcpy(recv_pack->data.mes,login_flag);
     recv_pack->data.recv_fd = recv_pack->data.send_fd;
     recv_pack->data.send_fd = listenfd;
-    
     
     //发送包
     send_pack(recv_pack);
     //考虑到中间的数据传输耗时，停顿若干时间，再修改状态
     usleep(10);
-    printf("*********************\n");
-    if(c[0] =='1')
-        p->statu = ONLINE;
-
+    if(login_flag[0] =='1')
+        user_infor[id].statu = ONLINE;
     free(recv_pack);
+    //printf("sdgvfsrevgertgvrt\n");
 }
  
  
@@ -581,7 +585,7 @@ void send_statu(PACK *recv_pack)
     char send_statu_mes[MAX_CHAR*2];
     int id;
     int count = 0;
-    INFO_USER *p;
+    INFO_USER *p,*q;
 
     memset(send_statu_mes,0,sizeof(send_statu_mes));
     
@@ -591,16 +595,62 @@ void send_statu(PACK *recv_pack)
     
     strcpy(recv_name,recv_pack->data.send_name);
     
-    recv_pack->user.
 
+    
+    //好友信息
+    //好友数目
+    //recv_pack->user.friends_num = p->friends_num;
+    //strcpy(recv_pack->user.username,recv_pack->data.recv_name);
+    //printf("===========%d\n",recv_pack->user.friends_num);
+    
+    for(int i = 0;i < 2;i++){
+        printf("------------%s-----%d----------\n",p->friends[i],p->friends_num);
+    }
+    
+    for(int i = 0;i < p->friends_num;i++){
+        //好友名称
+        strcpy(recv_pack->data.mes_2[i],p->friends[i]);
+        if((q = find_userinfor(p->friends[i]))== NULL){
+            //printf("\ni = %d\n",i);
+            break;
+        }
+        //状态
+        recv_pack->data.mes_2_st[i] = q->statu;
+        //printf("-------------user %s  friend %d %s\n",recv_pack->data.send_name,i,recv_pack->data.mes_2[i]);
+    }
+    
+    recv_pack->data.mes_int = p->friends_num;
 
+    printf("aaaaaaaaaaaaaaaaaaaaa%d\t,%d\n",recv_pack->data.mes_int,p->friends_num);
+    for(int i = 0;i < recv_pack->user.friends_num;i++){
+        printf("\n%d    %s  \n",recv_pack->user.friends[i].statu,recv_pack->user.friends[i].name);
+    }
+    
+    
+    
+    //recv_pack->data.mes_int = 99;
+    strcpy(recv_pack->data.send_name,"server");
+    strcpy(recv_pack->data.recv_name,recv_name);
+    recv_pack->data.recv_fd = recv_pack->data.send_fd;
+    recv_pack->data.send_fd = listenfd;
+    send_pack(recv_pack);
+    
+    //printf("----------------2 send begin!\n");
+    /* //群组信息
+    //群组数目
+    recv_pack->user.group_num = p->group_num;
+    for(int i = 0;i < p->group_num;i++){
+        recv_pack->group[i] = p->group[i]; 
+    }
+
+    printf("----------------3 send begin!\n");
     strcpy(recv_pack->data.recv_name,recv_name);
     strcpy(recv_pack->data.send_name,"server");
         recv_pack->data.recv_fd = recv_pack->data.send_fd;
         recv_pack->data.send_fd = listenfd;
         recv_pack->data.type_2 = 1;
         
-        send_pack(recv_pack);
+    send_pack(recv_pack); */
 
 
 /*     printf("----------------send begin!   %s   %d\n",p->username,p->friends_num);
@@ -715,9 +765,13 @@ void friend_add_agree(PACK *recv_pack)
     int id_own,id_friend;
     INFO_USER *p_own,*p_friend;
     //寻早用户id
+    
     p_own = find_userinfor(recv_pack->data.send_name);
+    
     strcpy(p_own->friends[++(p_own->friends_num)],recv_pack->data.mes);
+    
     p_friend = find_userinfor(recv_pack->data.mes);
+    
     strcpy(p_friend->friends[++(p_friend->friends_num)],recv_pack->data.send_name);
     
     free(recv_pack);
@@ -726,8 +780,6 @@ void friend_add_agree(PACK *recv_pack)
 //请求添加
 void friend_add(PACK *recv_pack){
     
-    /* int id_own,id_friend; */
-    /* PACK send_pack; */
     char *mes = recv_t_add_agree.data.send_name;
     strcpy(recv_pack->data.recv_name,recv_pack->data.mes);
     strcpy(recv_pack->data.send_name,"server");
@@ -746,10 +798,17 @@ void friend_del(PACK *recv_pack)
     int id_own,id_own_1;
     INFO_USER *p_own,*p_own_1;
     INFO_USER *p_friend,*p_friend_1;
+    
     p_own = find_userinfor(recv_pack->data.send_name);
+    
     del_friend_infor(p_own,recv_pack->data.mes); 
+    
     p_friend = find_userinfor(recv_pack->data.mes);
+    
+    printf("friend_name == %s\n",p_friend->username);
+    
     del_friend_infor(p_friend,recv_pack->data.send_name); 
+    
     free(recv_pack);
 }
  
@@ -1353,6 +1412,10 @@ int user_infor_find(INFO_USER *node){
     
     printf("read user_mes success!\n");
 
+    for(int i = 0;i < 4;i++){
+        printf("");
+    }
+
     return 1;
 }
 
@@ -1691,10 +1754,12 @@ INFO_USER *find_userinfor(char username_t[])
     int i;
     INFO_USER *p = user_infor;
     if(user_num == 0)  return NULL;
-    for(i=1;i<=user_num;i++)
+    for(i = 0;i<=user_num;i++)
     {
+        //printf("\n  user  %s  ,%d\n",p->username,i);
         if(strcmp(p->username,username_t) == 0)
             return p;
+        p = p->next;
     }
     if(i == user_num+1) 
         return NULL;
@@ -1721,6 +1786,7 @@ void signal_close(int i)
 void send_pack(PACK *pack_send_pack_t)
 {
     pthread_mutex_lock(&mutex);  
+    printf("---\n");
     memcpy(&(m_pack_send[m_send_num++]),pack_send_pack_t,sizeof(PACK));
     pthread_mutex_unlock(&mutex);  
 }
@@ -1774,19 +1840,15 @@ int judge_usename_same(char username_t[])
 int del_friend_infor(INFO_USER *p,char friend_name[]) 
 {
     int id_1;
-    for(int i = 1 ;i <= p->friends_num;i++)
-    {
-        if(strcmp(p->friends[i],friend_name) == 0)
-        {   
+    for(int i = 0 ;i < p->friends_num;i++){
+        if(strcmp(p->friends[i],friend_name) == 0){   
             id_1 = i;
             break;
         }
- 
     }
-    for(int i = id_1;i < p->friends_num;i++)
-    {
-        strcpy(p->friends[i],p->friends[i+1]);
-    }
+        for(int i = id_1;i < p->friends_num;i++){
+            strcpy(p->friends[i],p->friends[i+1]);
+        }
     p->friends_num--;
 }
  

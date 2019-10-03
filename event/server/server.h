@@ -86,18 +86,13 @@ pthread_mutex_t  mutex_check_file;
 
 //用户信息的群组信息
 typedef struct infor_user_group{
-    char group_name[100];  //群组名
+    char group_name[20];  //群组名
     int  kind;                  //群中职位 群主 1 ，管理员 2 ，普通成员 3
     int  num;                   //群组数目
     int  statue;                //状态
     int         group_member_num;   //群组人员数目
-    char        group_member_name[USER_MAX][100];  //群组成员
+    char        group_member_name[20][20];  //群组成员
 }INFOR_USER_GROUP;
-
-
-
-
-
 
 /////////////////////////////////////////////////////////////////////////////////////////////
  //好友信息
@@ -131,30 +126,19 @@ typedef struct datas{
     //time_t   time;
     char     mes[20*2];      //信息
     char     group_chat[20];   //存储群聊时发送消息的人
-    int      type_2;                //第二标识类型
+    int      type_2[20];                //第二标识类型
     int      mes_int;               //传数字
-    
+    char     mes_2[20][20];   //朋友
+    int      mes_2_st[20];
 }DATA;
 
 typedef struct package{
     int   type;
     DATA  data;
-    INFOR_USER_GROUP group[10];   //群信息
+    //INFOR_USER_GROUP group[10];   //群信息
     USER_INFOR user;         //成员信息
 }PACK;
 ////////////////////////////////////////////////////////////////////////////////
-
- 
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -88,11 +88,6 @@ typedef struct infor_user_group{
       INFOR_USER_GROUP group[20]; // 群组信息
   }USER_INFOR;
 
-
-
-
-
-
 //和服务端保持一致
 //包信息
 typedef struct datas{
@@ -103,16 +98,17 @@ typedef struct datas{
     //time_t   time;
     char     mes[20*2];      //信息
     char     group_chat[20];   //存储群聊时发送消息的人
-    int      type_2;                //第二标识类型
+    int      type_2[20];                //第二标识类型
     int      mes_int;               //传数字
-    
+    char     mes_2[20][20];   //朋友
+    int      mes_2_st[20];
 }DATA;
 
 typedef struct package{
     int   type;
     DATA  data;
-    INFOR_USER_GROUP group[10];   //群信息
-    USER_INFOR user[10];         //成员信息
+    //INFOR_USER_GROUP group[10];   //群信息
+    USER_INFOR user;         //成员信息
 }PACK;
 
 
