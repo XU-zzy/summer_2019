@@ -210,6 +210,7 @@ void *deal(void *recv_pack_t)
         case GROUP_SEE:
             printf("=====group\n");
             send_group_statu(recv_pack);
+            printf("group end!\n");
         //添加好友
         case FRIEND_ADD:
             friend_add(recv_pack);
@@ -543,8 +544,10 @@ void login(PACK *recv_pack)
 void registe(PACK *recv_pack)
 {
     char registe_flag[10];
- 
-    if(judge_usename_same(recv_pack->data.send_name)){
+    INFO_USER *p = user_infor;
+    p = find_userinfor(recv_pack->data.send_name);
+
+    if(p == NULL){
         recv_pack->data.mes_int = 1;
         //添加用户
         int flag = registe_new_user(recv_pack->data.send_name,recv_pack->data.mes);
@@ -643,20 +646,26 @@ void send_statu(PACK *recv_pack){
 //查看群组
 void send_group_statu(PACK *recv_pack){
     INFO_USER *p = user_infor;
+    char *user_group_name[20];
 
+    printf("in\n");
     p = find_userinfor(recv_pack->data.send_name);
+    printf("find success  %s\n",p->username);
 
-    recv_pack->data.mes_int = p->group_num;
+    //获得用户加入的群组名和数目
+    recv_pack->data.mes_int = find_user_group(p->username,user_group_name);
+    printf("\nyes!\n");
 
-    for(int i = 0;i < p->group_num;i++){
+    //printf("num = %d   ,%d",recv_pack->data.mes_int,p->group_num);
+    
+    for(int i = 0;i < recv_pack->data.mes_int;i++){
         //群名
-        strcpy(recv_pack->data.mes_2[i],p->group[i].group_name);
-        //群组人数
-        recv_pack->data.mes_2_st[i] = p->group[i].group_member_num;
+        strcpy(recv_pack->data.mes_2[i],user_group_name[i]);
 
-        printf("\n%s------%d---\n",recv_pack->data.mes_2[i],recv_pack->data.mes_2_st[i]);
+        printf("\n=============%s------%d---\n",recv_pack->data.mes_2[i]);
     }
     
+    printf("send begin!\n");
     //发送包
     strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
     strcpy(recv_pack->data.send_name,"server");
@@ -664,12 +673,33 @@ void send_group_statu(PACK *recv_pack){
     recv_pack->data.send_fd = listenfd;
     send_pack(recv_pack);
 
+    //usleep(10000);
     //释放包
-    free(recv_pack);
+    //free(recv_pack);
 }
 
 
-
+//查找用户所加入的群组,返回群组数目
+int find_user_group(char username[],char *user_group[20]){
+    INFO_GROUP *group = group_infor;
+    int num = 0;
+    if(group == NULL){
+        return 0;
+    }
+    printf("\n===%d\n",group_num);
+    for(int i = 0;i < group_num;i++){
+        for(int j = 0;j < group_infor[i].member_num;j++){
+            if(strcmp(group_infor[i].member_name[j],username) == 0){
+                printf("\n$$$$$$$$$$$$$$$$%s   %d\n",group_infor[i].member_name[j],i);
+                strcpy(user_group[num++],group_infor[i].member_name[j]);
+                //printf("------%s------\n",user_group[num-1]);
+                break;
+            }
+        }
+        group = group->next;
+    }
+    return num;
+}
 
 
 
@@ -788,8 +818,7 @@ void group_create(PACK *recv_pack)
  
  
 //加群
-void group_join(PACK *recv_pack)
-{
+void group_join(PACK *recv_pack){
     INFO_GROUP *p_group = find_groupinfor(recv_pack->data.mes);
 
     //找到该群，并加入
@@ -1430,6 +1459,7 @@ int group_infor_find(INFO_GROUP *node){
         //printf("\n\n%s,%d\n",q->group_name,q->member_num);
         List_AddTail(p,q);
         group_num++;
+        printf("\ngroup num = %d\n\n",group_num);
         //printf("------%s------\n",q->group_name);
     }
 
@@ -1448,11 +1478,11 @@ int group_member_find(INFO_USER *node)
     INFO_GROUP *p = group_infor;
     char command_group_members[MAX_CHAR*2];
     int num = 0;
+    //printf("\ngroup num = %d\n\n",group_num);
     while(num != group_num){
         
         sprintf(command_group_members,"select *from zzy_chat_group_members where group_name = '%s' ",p->group_name);
-
-        //printf("%d---------%s ------- %s\n",group_num,p->group_name,p->next->group_name);
+        
         int rc_group_member = mysql_real_query(&mysql, command_group_members, strlen(command_group_members));
     
         if (rc_group_member != 0){
@@ -1466,8 +1496,8 @@ int group_member_find(INFO_USER *node)
         int rows_group_member = mysql_num_rows(res_group_member);
 
 
-        int rows = mysql_num_rows(res);  
-            printf("group member rows is: %d\n",rows);
+        int rows = mysql_num_rows(res_group_member);  
+            printf("group member rows is: %d\n",rows_group_member);
 
         int i = 0;
         char a[2],b[2];
@@ -1479,6 +1509,7 @@ int group_member_find(INFO_USER *node)
             //群中职务
             strcpy(b,row[3]);
             p->kind[i] = b[0] - '0';
+            printf("%s\n",p->member_name[i]);
             i++;
         }
 
@@ -1738,34 +1769,6 @@ void send_pack_memcpy_server(int type,char *send_name,char *recv_name,int sockfd
         my_err("send",__LINE__);
     }
 }
- 
- 
-/* //判断客户端登录密码每是否正确
-int passward_judge(int id,char *log_pass)
-{
-        if(strcmp(user_infor[id].password,log_pass) == 0){
-            //printf("\n\n%s************%s\n\n",user_infor[id].password,log_pass);
-            return 0;
-        }
-    return 1;
-} */
- 
- 
-//判断用户信息中是否有当前名字的信息
-int judge_usename_same(char username_t[])
-{
-    int i;
-    if(user_num == 0)  
-        return 1;
-    for(i=1;i<=user_num;i++)
-    {
-        if(strcmp(user_infor[i].username,username_t) == 0)
-            return 0;
-    }
-    if(i == user_num+1) 
-        return 1;
-}
- 
  
 //给定一个用户，从用户信息删除好友
 int del_friend_infor(INFO_USER *p,char friend_name[]) 

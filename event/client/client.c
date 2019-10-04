@@ -124,9 +124,16 @@ void upadte_friend(PACK pack_t){
     return;
 }
 
-void update_friend(PACK pack_t){
+void update_group(PACK pack_t){
     //群组数目
     m_my_infor.group_num = pack_t.data.mes_int;
+
+    for(int i = 0;i < pack_t.data.mes_int;i++){
+        //名字
+        strcpy(m_my_infor.group[i].group_name,pack_t.data.mes_2[i]);
+        //群人数
+        //m_my_infor.group[i].group_member_num = pack_t.data.mes_2_st[i];
+    }
 
 }
 
@@ -702,7 +709,7 @@ void group_see()
     printf("***********群组列表*************  \n");
     //int i;
     for(int i=1 ;i<=m_my_infor.group_num ;i++){
-        printf("  ID[%d]:       %s\n", i,m_my_infor.group[i]);
+        printf("  ID[%d]:       %s   %d\n", i,m_my_infor.group[i],m_my_infor.group[i].group_member_num);
     }
     printf("\n\n");
     printf("*************************************** \n");

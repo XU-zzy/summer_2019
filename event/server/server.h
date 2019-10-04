@@ -152,6 +152,7 @@ typedef struct infor_user
     char friends[USER_MAX][MAX_CHAR];// 好友信息
     int  friends_num;                //  好友数量
     INFOR_USER_GROUP group[USER_MAX]; // 群组信息
+    char group_name[20][20];        //加入群名字
     int group_num;                //加入群组数量
     struct infor_user *next;
     struct infor_user*prev;
@@ -224,13 +225,12 @@ void signal_close(int i);
 void send_pack(PACK *pack_send_pack_t);
 void send_pack_memcpy_server(int type,char *send_name,char *recv_name,int sockfd1,char *mes);
 
-int passward_judge(int id,char *log_pass);
-int judge_usename_same(char username_t[]);
 int del_friend_infor(INFO_USER *p,char friend_name[]);
 void del_group_from_user(char *username,char *groupname);
 
 INFO_GROUP *find_groupinfor(char groupname_t[]);
 int find_fileinfor(char *filename);
+int find_user_group(char username[],char *user_group[20]);
 
 void login(PACK *recv_pack);
 void registe(PACK *recv_pack);
