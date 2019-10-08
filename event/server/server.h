@@ -20,6 +20,7 @@
 #define FRIEND_ADD               4
 #define FRIEND_DEL               5
 #define GROUP_SEE                6  
+#define GROUP_SEE_MEMBER         27
 #define GROUP_CREATE             7
 #define GROUP_JOIN               8
 #define GROUP_QIUT               9
@@ -237,6 +238,7 @@ void registe(PACK *recv_pack);
 int registe_new_user(char username_t[],char passward[]);
 void send_statu(PACK *recv_pack);
 void send_group_statu(PACK *recv_pack);
+void send_group_member(PACK *recv_pack);
 
 void friend_add(PACK *recv_pack);
 void friend_add_agree(PACK *recv_pack);

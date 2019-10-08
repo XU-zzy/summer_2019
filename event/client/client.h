@@ -25,7 +25,8 @@
 #define FRIEND_SEE               3
 #define FRIEND_ADD               4
 #define FRIEND_DEL               5
-#define GROUP_SEE                6  
+#define GROUP_SEE                6
+#define GROUP_SEE_MEMBER         27
 #define GROUP_CREATE             7
 #define GROUP_JOIN               8
 #define GROUP_QIUT               9
@@ -158,7 +159,7 @@ void registe();
 void get_status_mes();
 void change_statu(PACK pack_deal_statu_t);
 void upadte_friend(PACK pack_t);
-void update_friend(PACK pack_t);
+//void update_friend(PACK pack_t);
 
 
 void add_friend();
@@ -168,7 +169,9 @@ void group_join();
 void group_qiut();
 void group_del();
 void group_mes_get(USER_INFOR m_my_infor);
-void get_group_member(int n);
+void get_group_member(char *group_name_t);
+void update_group(PACK pack_t);
+void upadte_group_member(PACK pack_t);
 
 void send_mes_to_one();
 void send_mes_to_group();

@@ -184,7 +184,6 @@ int main()
 //处理包的函数，每接受到一个包，开新线程，根据类型进行处理
 void *deal(void *recv_pack_t)
 {
-    /* int i; */
     PACK *recv_pack = (PACK *)recv_pack_t;
     printf("\n\n\ndeal function = %d\n", recv_pack->type);
   
@@ -211,6 +210,11 @@ void *deal(void *recv_pack_t)
             printf("=====group\n");
             send_group_statu(recv_pack);
             printf("group end!\n");
+        //查看特定群组成员
+        case GROUP_SEE_MEMBER:
+            printf("\n===group_member\n");
+            send_group_member(recv_pack);
+            printf("group_member end!\n");
         //添加好友
         case FRIEND_ADD:
             friend_add(recv_pack);
@@ -646,15 +650,39 @@ void send_statu(PACK *recv_pack){
 //查看群组
 void send_group_statu(PACK *recv_pack){
     INFO_USER *p = user_infor;
-    char *user_group_name[20];
+    //char *user_group_name[20];
 
     printf("in\n");
     p = find_userinfor(recv_pack->data.send_name);
     printf("find success  %s\n",p->username);
 
     //获得用户加入的群组名和数目
-    recv_pack->data.mes_int = find_user_group(p->username,user_group_name);
-    printf("\nyes!\n");
+    /* recv_pack->data.mes_int = find_user_group(p->username,user_group_name);
+    printf("\nyes!\n"); */
+
+    
+    char user_group_name[20][20];
+    INFO_GROUP *group = group_infor;
+    int num = 0;
+    if(group == NULL){
+        return ;
+    }
+    printf("\n===%d\n",group_num);
+    for(int i = 0;i < group_num;i++){        
+            printf("\naaaaaaaaaaaaaaa%s   %d\n",group_infor[i].group_name,i);
+        for(int j = 0;j < group_infor[i].member_num;j++){
+            if(strcmp(group_infor[i].member_name[j],p->username) == 0){
+                printf("\n$$$$$$$$$$$$$$$$%s   %d\n",group_infor[i].group_name,i);
+                strcpy(user_group_name[num++],group_infor[i].group_name);
+                recv_pack->data.type_2[i] = group_infor[i].member_num;
+                //printf("------%s------\n",user_group[num-1]);
+                break;
+            }
+        }
+        group = group->next;
+    }
+    
+    recv_pack->data.mes_int = num;
 
     //printf("num = %d   ,%d",recv_pack->data.mes_int,p->group_num);
     
@@ -662,7 +690,7 @@ void send_group_statu(PACK *recv_pack){
         //群名
         strcpy(recv_pack->data.mes_2[i],user_group_name[i]);
 
-        printf("\n=============%s------%d---\n",recv_pack->data.mes_2[i]);
+        printf("\n=============%s------%d---%d\n",recv_pack->data.mes_2[i],i,recv_pack->data.mes_int);
     }
     
     printf("send begin!\n");
@@ -678,27 +706,38 @@ void send_group_statu(PACK *recv_pack){
     //free(recv_pack);
 }
 
-
-//查找用户所加入的群组,返回群组数目
-int find_user_group(char username[],char *user_group[20]){
-    INFO_GROUP *group = group_infor;
-    int num = 0;
+//查看群成员
+void send_group_member(PACK *recv_pack){
+    INFO_GROUP *group = group_infor,*p;
+    
+    p = find_groupinfor(group);
+    
     if(group == NULL){
-        return 0;
+        return;
     }
-    printf("\n===%d\n",group_num);
-    for(int i = 0;i < group_num;i++){
-        for(int j = 0;j < group_infor[i].member_num;j++){
-            if(strcmp(group_infor[i].member_name[j],username) == 0){
-                printf("\n$$$$$$$$$$$$$$$$%s   %d\n",group_infor[i].member_name[j],i);
-                strcpy(user_group[num++],group_infor[i].member_name[j]);
-                //printf("------%s------\n",user_group[num-1]);
-                break;
-            }
-        }
-        group = group->next;
+        
+    int num;
+    printf("\n--------%d\n",group_num);
+
+    for(int i = 0;i < p->member_num;i++){
+        //成员名称
+        strcpy(recv_pack->data.mes_2[i],p->member_name[i]);
+        
+        //状态
+        recv_pack->data.mes_2_st[i] = p->statue[i];
+
+        //群职务
+        recv_pack->data.type_2[i] = p->kind[i];
+        printf("p========%s  %d %d\n",p->member_name[i],p->statue[i],p->kind[i]);
+        printf("pack=====%s  %d %d\n",recv_pack->data.mes_2[i],recv_pack->data.mes_2_st[i],recv_pack->data.type_2[i]);
     }
-    return num;
+    printf("group_member send end!\n");
+    //发送包
+    strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
+    strcpy(recv_pack->data.send_name,"server");
+    recv_pack->data.recv_fd = recv_pack->data.send_fd;
+    recv_pack->data.send_fd = listenfd;
+    send_pack(recv_pack);
 }
 
 

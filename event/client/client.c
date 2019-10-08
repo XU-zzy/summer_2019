@@ -38,9 +38,9 @@ USER_INFOR m_my_infor;
   //定义套接字，IP，端口
   int sockfd;
 
-  char *IP = "192.168.1.43";
+  /* char *IP = "192.168.1.43"; */
   /* char *IP = "192.168.3.210"; */
-  /* char *IP = "192.168.122.1"; */
+  char *IP = "192.168.122.1";
   short PORT = 4057;
   typedef struct sockaddr SA; 
 
@@ -124,20 +124,6 @@ void upadte_friend(PACK pack_t){
     return;
 }
 
-void update_group(PACK pack_t){
-    //群组数目
-    m_my_infor.group_num = pack_t.data.mes_int;
-
-    for(int i = 0;i < pack_t.data.mes_int;i++){
-        //名字
-        strcpy(m_my_infor.group[i].group_name,pack_t.data.mes_2[i]);
-        //群人数
-        //m_my_infor.group[i].group_member_num = pack_t.data.mes_2_st[i];
-    }
-
-}
-
-
 //根据发来数据包及时更新
 //好友状态
 void *deal_statu(void *arg)
@@ -153,9 +139,9 @@ void *deal_statu(void *arg)
         }
         m_recv_num_friend_see = 0;
 
-        for(i = 1;i <= m_recv_num_group_see;i++){
+        /* for(i = 1;i <= m_recv_num_group_see;i++){
             update_group(m_pack_recv_group_see[i]);
-        }
+        } */
         pthread_mutex_unlock(&mutex_local_user); 
         usleep(1); 
     }
@@ -223,9 +209,13 @@ void *clien_recv_thread(void *arg)
                 //printf("pack = %d \n",pack_t.user.friends_num);
                 m_pack_recv_friend_see[++m_recv_num_friend_see] = pack_t;
                 break;
+            //查看群组
             case GROUP_SEE:
-                m_pack_recv_group_see[++m_recv_num_group_see] = pack_t;
-
+                //m_pack_recv_group_see[++m_recv_num_group_see] = pack_t;
+                update_group(pack_t);
+            //查看特定群的成员
+            case GROUP_SEE_MEMBER:
+                upadte_group_member(pack_t);
             //创建群聊
             case GROUP_CREATE:
                 m_flag_group_create = pack_t.data.mes[0];
@@ -547,7 +537,7 @@ void get_status_mes()
         my_err("friend mes send\n",__LINE__);
     }
 
-    PACK pack_group_see;
+    /* PACK pack_group_see;
     pack_group_see.type = GROUP_SEE;
 
     strcpy(pack_group_see.data.send_name,m_my_infor.username);
@@ -557,7 +547,7 @@ void get_status_mes()
 
     if(send(sockfd,&pack_group_see,sizeof(PACK),0) < 0){
         my_err("group mes send\n",__LINE__);
-    }
+    } */
 }
  
 /* //根据服务端发送来的包，利用字符串解析，更新当前好友状态
@@ -698,21 +688,55 @@ void del_friend()
 }
 
 
+//获取群信息
+void group_mes_get(USER_INFOR m_my_infor){
+    send_pack(GROUP_SEE,m_my_infor.username,"server","all\0");
+}
+
+//获取特定群成员名单
+void get_group_member(char *group_name_t){
+    send_pack(GROUP_SEE_MEMBER,m_my_infor.username,"server",group_name_t);   
+}
+
+//更新群组信息
+void update_group(PACK pack_t){
+    //群组数目
+    m_my_infor.group_num = pack_t.data.mes_int;
+
+    for(int i = 0;i < m_my_infor.group_num;i++){
+        strcpy(m_my_infor.group[i].group_name,pack_t.data.mes_2[i]);
+        m_my_infor.group[i].group_member_num = pack_t.data.type_2[i];
+        printf("\n====%s---%s\n",pack_t.data.mes_2[i],m_my_infor.group[i].group_name);
+    }
+}
+
+//更新群成员信息
+void upadte_group_member(PACK pack_t){
+    
+
+}
+
+
+
 //群组信息查看
 void group_see()
 {
     pthread_mutex_lock(&mutex_local_user);
     
     //获取群信息
-    //group_mes_get(m_my_infor);
+    group_mes_get(m_my_infor);
     
+    /* printf("wait....\n");
+    sleep(1); */
+
     printf("***********群组列表*************  \n");
     //int i;
-    for(int i=1 ;i<=m_my_infor.group_num ;i++){
-        printf("  ID[%d]:       %s   %d\n", i,m_my_infor.group[i],m_my_infor.group[i].group_member_num);
+    for(int i = 0 ;i < m_my_infor.group_num ;i++){
+        printf("  ID[%d]:       %s   %d\n", i,m_my_infor.group[i].group_name,m_my_infor.group[i].group_member_num);
     }
     printf("\n\n");
     printf("*************************************** \n");
+    
     int choice;
     do{
         printf("[1]查看群成员\t[2]退出\n");
@@ -720,7 +744,7 @@ void group_see()
         scanf("%d",&choice);
 
         if(choice == 1){
-            //group_member_see();
+            group_member_see();
         }
 
         if(choice != 1 && choice != 2){
@@ -732,36 +756,43 @@ void group_see()
     pthread_mutex_unlock(&mutex_local_user);  
 }
 
-/* //查看群成员列表
+//查看群成员列表
 void group_member_see(){
-    int choice;
+    char *choice;
+    int flag = 1;
     do{
-        printf("请输入你要查看的群组的序号（输入0退出）：");
+        printf("请输入你要查看的群组的名称(输入q退出)：");
         fflush(stdin);
-        scanf("%d",&choice);
-        
-        if(choice != 0){
-            get_group_member(choice);
+        scanf("%s",choice);
+        printf("\ngroup == %s\n",choice);
 
-            printf("正在查询.....\n");
-            sleep(2);
-            printf("\n************群成员列表**************\n");
-
-            for(int i = 1;i <= m_my_infor.group_member_num;i++){
-                printf("ID[%d]\t\t%s\n",i,m_my_infor.group_member_name[choice][i]);
-            }
-
-            printf("\n**************************************\n");
+        if(choice[0] == 'q'){
+            break;
         }
 
-    }while(choice != 0);
+        for(int i = 0;i < m_my_infor.group_num;i++){
+            if(strcmp(m_my_infor.group[i].group_name,choice) == 0){
+                get_group_member(choice);
+
+                printf("\n************群成员列表**************\n");
+                if(strcpy(m_my_infor.group[i].group_name,choice) == 0){
+                    for(int j = 0;j < m_my_infor.group[i].group_member_num;j++){
+                        printf("ID[%d]\t\t%s\n",i,m_my_infor.group[i].group_member_name[j]);
+                    }
+                }
+                printf("\n**************************************\n");
+                return;
+            }
+        }
+        
+        printf("群名称有误或未加入该群请重新输入！\n");
+    }while(flag != 0);
     return;
-} */
+}
 
-/* void get_group_member(int n){
 
-} */
- 
+  
+
 
 
 
