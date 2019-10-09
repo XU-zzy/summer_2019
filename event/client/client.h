@@ -178,6 +178,7 @@ void send_mes_to_group();
 void send_mes(char mes_recv_name[],int type);
 
 void *show_mes(void *username);
+void *show_mes_group(void *username);
 void print_mes(int id);
 void send_file();
 void *pthread_send_file(void *mes_t);
