@@ -72,12 +72,12 @@
 
 //用户信息的群组信息
 typedef struct infor_user_group{
-    char group_name[20];  //群组名
-    int  kind;                  //群中职位 群主 1 ，管理员 2 ，普通成员 3
+    char group_name[20];        //群组名
+    int  kind[10];                  //群中职位 群主 1 ，管理员 2 ，普通成员 3
     int  num;                   //群组数目
     int  group_member_num;   //群组人员数目
     char group_member_name[20][20];  //群组成员
-    int  statue;
+    int  statue[10];          //成员状态
 }INFOR_USER_GROUP;
 
   //用户信息

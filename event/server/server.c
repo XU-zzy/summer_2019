@@ -210,11 +210,13 @@ void *deal(void *recv_pack_t)
             printf("=====group\n");
             send_group_statu(recv_pack);
             printf("group end!\n");
+            break;
         //查看特定群组成员
         case GROUP_SEE_MEMBER:
             printf("\n===group_member\n");
             send_group_member(recv_pack);
             printf("group_member end!\n");
+            break;
         //添加好友
         case FRIEND_ADD:
             friend_add(recv_pack);
@@ -647,115 +649,6 @@ void send_statu(PACK *recv_pack){
     free(recv_pack);
 }
 
-//查看群组
-void send_group_statu(PACK *recv_pack){
-    INFO_USER *p = user_infor;
-    //char *user_group_name[20];
-
-    printf("in\n");
-    p = find_userinfor(recv_pack->data.send_name);
-    printf("find success  %s\n",p->username);
-
-    //获得用户加入的群组名和数目
-    /* recv_pack->data.mes_int = find_user_group(p->username,user_group_name);
-    printf("\nyes!\n"); */
-
-    
-    char user_group_name[20][20];
-    INFO_GROUP *group = group_infor;
-    int num = 0;
-    if(group == NULL){
-        return ;
-    }
-    printf("\n===%d\n",group_num);
-    for(int i = 0;i < group_num;i++){        
-            printf("\naaaaaaaaaaaaaaa%s   %d\n",group_infor[i].group_name,i);
-        for(int j = 0;j < group_infor[i].member_num;j++){
-            if(strcmp(group_infor[i].member_name[j],p->username) == 0){
-                printf("\n$$$$$$$$$$$$$$$$%s   %d\n",group_infor[i].group_name,i);
-                strcpy(user_group_name[num++],group_infor[i].group_name);
-                recv_pack->data.type_2[i] = group_infor[i].member_num;
-                //printf("------%s------\n",user_group[num-1]);
-                break;
-            }
-        }
-        group = group->next;
-    }
-    
-    recv_pack->data.mes_int = num;
-
-    //printf("num = %d   ,%d",recv_pack->data.mes_int,p->group_num);
-    
-    for(int i = 0;i < recv_pack->data.mes_int;i++){
-        //群名
-        strcpy(recv_pack->data.mes_2[i],user_group_name[i]);
-
-        printf("\n=============%s------%d---%d\n",recv_pack->data.mes_2[i],i,recv_pack->data.mes_int);
-    }
-    
-    printf("send begin!\n");
-    //发送包
-    strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
-    strcpy(recv_pack->data.send_name,"server");
-    recv_pack->data.recv_fd = recv_pack->data.send_fd;
-    recv_pack->data.send_fd = listenfd;
-    send_pack(recv_pack);
-
-    //usleep(10000);
-    //释放包
-    //free(recv_pack);
-}
-
-//查看群成员
-void send_group_member(PACK *recv_pack){
-    INFO_GROUP *group = group_infor,*p;
-    
-    p = find_groupinfor(group);
-    
-    if(group == NULL){
-        return;
-    }
-        
-    int num;
-    printf("\n--------%d\n",group_num);
-
-    for(int i = 0;i < p->member_num;i++){
-        //成员名称
-        strcpy(recv_pack->data.mes_2[i],p->member_name[i]);
-        
-        //状态
-        recv_pack->data.mes_2_st[i] = p->statue[i];
-
-        //群职务
-        recv_pack->data.type_2[i] = p->kind[i];
-        printf("p========%s  %d %d\n",p->member_name[i],p->statue[i],p->kind[i]);
-        printf("pack=====%s  %d %d\n",recv_pack->data.mes_2[i],recv_pack->data.mes_2_st[i],recv_pack->data.type_2[i]);
-    }
-    printf("group_member send end!\n");
-    //发送包
-    strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
-    strcpy(recv_pack->data.send_name,"server");
-    recv_pack->data.recv_fd = recv_pack->data.send_fd;
-    recv_pack->data.send_fd = listenfd;
-    send_pack(recv_pack);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 //跟据收到包的内容，添加好友
 //同意添加
 void friend_add_agree(PACK *recv_pack)
@@ -807,6 +700,115 @@ void friend_del(PACK *recv_pack)
 }
  
 
+//查看群组
+void send_group_statu(PACK *recv_pack){
+    INFO_USER *p = user_infor;
+    //char *user_group_name[20];
+
+    printf("in\n");
+    p = find_userinfor(recv_pack->data.send_name);
+    printf("find success  %s\n",p->username);
+
+    //获得用户加入的群组名和数目
+    /* recv_pack->data.mes_int = find_user_group(p->username,user_group_name);
+    printf("\nyes!\n"); */
+
+    
+    char user_group_name[20][20];
+    INFO_GROUP *group = group_infor;
+    int num = 0;
+    if(group == NULL){
+        return ;
+    }
+    printf("\n===%d\n",group_num);
+    //群组依次查找
+    //查找成功时作为存入数据的排序
+    int n = 0;
+    for(int i = 0;i < group_num;i++){        
+        printf("\naaaaaaaaaaaaaaa%s   %d\n",group->group_name,i);
+        //群组中成员查找
+        for(int j = 0;j < group->member_num;j++){
+            if(strcmp(group->member_name[j],p->username) == 0){
+                printf("\n$$$$$$$$$$$$$$$$%s   %d\n",group->group_name,i);
+                strcpy(user_group_name[num++],group->group_name);
+                //群成员人数
+                recv_pack->data.type_2[n++] = group->member_num;
+                printf("=======%d %d",recv_pack->data.type_2[i],i);
+                //printf("------%s------\n",user_group[num-1]);
+                break;
+            }
+        }
+        
+        group = group->next;
+    }
+    
+    recv_pack->data.mes_int = num;
+
+    //printf("num = %d   ,%d",recv_pack->data.mes_int,p->group_num);
+    
+    for(int i = 0;i < recv_pack->data.mes_int;i++){
+        //群名
+        strcpy(recv_pack->data.mes_2[i],user_group_name[i]);
+
+        printf("\n=============%s------%d---%d===member:%d\n",recv_pack->data.mes_2[i],i,recv_pack->data.mes_int,recv_pack->data.type_2[i]);
+    }
+    
+    printf("send begin!\n");
+    //发送包
+    strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
+    strcpy(recv_pack->data.send_name,"server");
+    recv_pack->data.recv_fd = recv_pack->data.send_fd;
+    recv_pack->data.send_fd = listenfd;
+    send_pack(recv_pack);
+
+    //usleep(10000);
+    //释放包
+    //free(recv_pack);
+}
+
+//查看群成员
+void send_group_member(PACK *recv_pack){
+    INFO_GROUP *group = group_infor,*p;
+    
+    p = find_groupinfor(recv_pack->data.mes);
+    
+    if(group == NULL){
+        return;
+    }
+        
+    int num;
+    printf("\n----%s----%d====member:%d\n",p->group_name,group_num,p->member_num);
+
+    recv_pack->data.mes_int = p->member_num;
+    for(int i = 0;i < p->member_num;i++){
+        //成员名称
+        strcpy(recv_pack->data.mes_2[i],p->member_name[i]);
+        
+        //状态
+        recv_pack->data.mes_2_st[i] = p->statue[i];
+
+        //群职务
+        recv_pack->data.type_2[i] = p->kind[i];
+        printf("p========%s  %d %d\n",p->member_name[i],p->statue[i],p->kind[i]);
+        printf("pack=====%s  %d %d\n",recv_pack->data.mes_2[i],recv_pack->data.mes_2_st[i],recv_pack->data.type_2[i]);
+    }
+    printf("group_member send end!\n");
+    //发送包
+    strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
+    strcpy(recv_pack->data.send_name,"server");
+    recv_pack->data.recv_fd = recv_pack->data.send_fd;
+    recv_pack->data.send_fd = listenfd;
+    send_pack(recv_pack);
+}
+
+
+
+
+
+
+
+
+
 
 //创建群
 void group_create(PACK *recv_pack)
@@ -816,7 +818,7 @@ void group_create(PACK *recv_pack)
     //判断是否已经建立
     //若已经建立怎发送消息
     p_group = find_groupinfor(recv_pack->data.mes);
-    if(p_group == NULL){
+    if(p_group != NULL){
         strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
         strcpy(recv_pack->data.send_name,"server");
         recv_pack->data.mes[0] = 1;
@@ -825,8 +827,9 @@ void group_create(PACK *recv_pack)
         return ;
     }
 
-    p_group = p_group->prev;
-
+    printf("begin creat!\n");
+    //p_group = p_group->prev;
+    
     INFO_GROUP *new_group = (INFO_GROUP *)malloc(sizeof(INFO_GROUP));
     INFO_USER *p_user;
 
@@ -834,19 +837,26 @@ void group_create(PACK *recv_pack)
     //新建群信息
     //群名
     strcpy(new_group->group_name,recv_pack->data.mes);
-    //群主加入群
-    strcpy(new_group->member_name[new_group->member_num++],recv_pack->data.send_name);
+    //群主加入群,设置为群主
+    printf("1112\n");
+    strcpy(new_group->member_name[new_group->member_num],recv_pack->data.send_name);
+    new_group->kind[0] = 1;
+    new_group->member_num = 1;
+    
+    printf("==1111===\n");
     //找到该用户
     p_user = find_userinfor(recv_pack->data.send_name);
+    
     //群信息赋值给该用户
-    strcpy(p_user->group[p_user->group_num].group_name,recv_pack->data.mes);
-    //设置为群主
-    p_user->group[p_user->group_num].kind = 1;
+    strcpy(p_user->group[p_user->group_num++].group_name,recv_pack->data.mes);
+    printf("=====\n");
+    
     //群数目+1
-    List_InsertAfter(p_group,new_group);
+    List_AddTail(group_infor,new_group);
     group_num++;
- 
+    printf("1111\n");
     printf("\n\ncreat group : %s  successfully! \n\n", recv_pack->data.mes);
+    printf("name = %s member %s %d\n",new_group->group_name,new_group->member_name[0],new_group->member_num);
     strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
     strcpy(recv_pack->data.send_name,"server");
  
@@ -856,6 +866,9 @@ void group_create(PACK *recv_pack)
 }
  
  
+
+
+
 //加群
 void group_join(PACK *recv_pack){
     INFO_GROUP *p_group = find_groupinfor(recv_pack->data.mes);
@@ -1499,13 +1512,18 @@ int group_infor_find(INFO_GROUP *node){
         List_AddTail(p,q);
         group_num++;
         printf("\ngroup num = %d\n\n",group_num);
-        //printf("------%s------\n",q->group_name);
+        printf("------%s------\n",q->group_name);
     }
 
     //去除空的链表头
     p = group_infor;
     group_infor = group_infor->next;
     List_DelNode(p);
+    /* INFO_GROUP *s = group_infor;
+    for(int i = 0;i < group_num;i++){
+        printf("assd===%s\n",s->group_name);
+        s = s->next;
+    } */
     printf("read group_mes success!\n");
 
     return 1;
@@ -1548,7 +1566,7 @@ int group_member_find(INFO_USER *node)
             //群中职务
             strcpy(b,row[3]);
             p->kind[i] = b[0] - '0';
-            printf("%s\n",p->member_name[i]);
+            printf("---%s====%s\n",p->group_name,p->member_name[i]);
             i++;
         }
 
@@ -1851,14 +1869,16 @@ INFO_GROUP *find_groupinfor(char groupname_t[])
 {
     INFO_GROUP *p = group_infor;
     int i;
-    if(group_num == 0)  return NULL;
+    if(group_num == 0)  
+        return NULL;
     for(i = 0;i < group_num;i++)
     {
+        printf("%d====group:%s\n",group_num,p->group_name);
         if(strcmp(p->group_name,groupname_t) == 0)
             return p;
+        p = p->next;
     }
-    if(i == group_num) 
-        return NULL;
+    return NULL;
 }
  
  
