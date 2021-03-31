@@ -182,21 +182,3 @@ typedef struct
 #define Paging_IsLastPage(paging) (Paging_CurPage(paging)>=Paging_TotalPages(paging))
 #endif /* LIST_H_ */
 
-#ifndef LIST_H_
-#define LIST_H_
-#include <stdlib.h>
-#include <assert.h>
-/*初始化链表。将链表 list 初始化为空的带头节点的双向循环列表*/
-#define List_Init(list,list_node_t) {					\
-		list=(list_node_t*)malloc(sizeof(list_node_t)); \
-		(list)->next=(list)->prev=list;					\
-	}
-
-//释放链表list中所有数据结点空间
-#define List_Free(list,list_node_t) {			\
-		assert(NULL!=list);						\
-		list_node_t *tmpPtr;					\
-		(list)->prev->next=NULL; 				\
-		while(NULL!=(tmpPtr=(list)->next)){ 	\
-			(list)->next=tmpPtr->next;			\
-			free(tmpPtr);		

@@ -143,6 +143,28 @@ typedef struct package{
 
 
 
+//文件 
+typedef struct package_file{
+    int type;
+    char     send_name[20];  //发送方
+    char     recv_name[20];  //接收方
+    int      send_fd;              //发送方fd
+    int      recv_fd;              //接收方fd
+    char mes[1024];         //信息
+    char file_name[100];    //文件名称
+    int  file_size;         //文件大小
+}PACK_FILE;
+
+
+
+
+
+
+
+
+
+
+
 // 储存用户信息结构体
 typedef struct infor_user 
 {

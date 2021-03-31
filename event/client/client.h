@@ -103,6 +103,7 @@ typedef struct datas{
     int      mes_int;               //传数字
     char     mes_2[20][20];   //朋友
     int      mes_2_st[20];
+    char     file_mes[1024];    //文件内容
 }DATA;
 
 typedef struct package{
@@ -111,16 +112,18 @@ typedef struct package{
     //INFOR_USER_GROUP group[10];   //群信息
     USER_INFOR user;         //成员信息
 }PACK;
+ 
 
-
-
-
-
-
-
-
-
-
+typedef struct package_file{
+    int type;
+    char     send_name[20];  //发送方
+    char     recv_name[20];  //接收方
+    int      send_fd;              //发送方fd
+    int      recv_fd;              //接收方fd
+    char mes[1024];         //信息
+    char file_name[100];    //文件名称
+    int  file_size;         //文件大小
+}PACK_FILE;
 
 
   typedef struct pthread_parameter
@@ -217,5 +220,18 @@ int get_choice(char *choice_t);
 void send_pack(int type,char *send_name,char *recv_name,char *mes);
 void send_pack_memcpy(int type,char *send_name,char *recv_name,char *mes);
 void add_friend_agree();
+
+
+
+
+void file_recv();
+
+
+
+
+
+
+
+
 
 #endif

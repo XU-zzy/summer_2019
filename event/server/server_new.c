@@ -254,11 +254,14 @@ void *deal(void *recv_pack_t)
         case CHAT_MANY:
             send_mes_to_group(recv_pack);
             break;
+        
+        
         //发送文件
         case FILE_SEND_BEGIN:
             file_recv_begin(recv_pack);
             break;
         case FILE_SEND:
+            printf("\n=============================\n");
             file_recv(recv_pack);
             break;
         case FILE_SEND_BEGIN_RP:
@@ -267,6 +270,8 @@ void *deal(void *recv_pack_t)
         case FILE_FINI_RP:
             file_send_finish(recv_pack);
             break;
+        
+        
         //消息记录
         case GROUP_RECORD:
         case USERS_RECORD:
@@ -1764,7 +1769,13 @@ void print_infor_file()
 //否则，建立文件信息，并返回文件大小为0
 void file_recv_begin(PACK *recv_pack)
 {
-    int flag = 0;
+    
+    recv_pack->type = 100;
+    send_pack(recv_pack);
+    
+    
+    
+    /* int flag = 0;
     int i;
     int file_size_now_t;
  
@@ -1772,7 +1783,7 @@ void file_recv_begin(PACK *recv_pack)
     for(i=1 ;i<= m_file_num ;i++)
     {
          //文件存在
-        if(strcmp(m_infor_file[i].file_name,recv_pack->data.mes+NUM_MAX_DIGIT) == 0)
+        if(strcmp(m_infor_file[i].file_name,recv_pack->data.mes) == 0)
         {
             file_size_now_t = m_infor_file[i].file_size_now;
             flag = 1;
@@ -1783,7 +1794,7 @@ void file_recv_begin(PACK *recv_pack)
     if(!flag)
     {
         file_size_now_t = 0;
-        strcpy(m_infor_file[++m_file_num].file_name,recv_pack->data.mes+NUM_MAX_DIGIT);
+        strcpy(m_infor_file[++m_file_num].file_name,recv_pack->data.mes);
         strcpy(m_infor_file[m_file_num].file_send_name,recv_pack->data.send_name);
         strcpy(m_infor_file[m_file_num].file_recv_name,recv_pack->data.recv_name);
         
@@ -1799,7 +1810,7 @@ void file_recv_begin(PACK *recv_pack)
             t += (int)(recv_pack->data.mes[k])*t1;
         }
        //建立文件信息 
-        m_infor_file[m_file_num].file_size = t;
+        m_infor_file[m_file_num].file_size = recv_pack->data.mes_int;
         m_infor_file[m_file_num].file_size_now  = 0;
         m_infor_file[m_file_num].flag = FILE_STATU_RECV_ING;
     }
@@ -1807,18 +1818,23 @@ void file_recv_begin(PACK *recv_pack)
     pthread_mutex_unlock(&mutex_check_file);  
     
     recv_pack->type = FILE_SEND_BEGIN_RP;
-    strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
     
+    strcpy(recv_pack->data.recv_name,recv_pack->data.send_name);
+    strcpy(recv_pack->data.send_name,"server");
+
     int digit = 0;
-    while(file_size_now_t != 0)
-    {   
+    //存在
+    while(file_size_now_t != 0){   
         recv_pack->data.mes[digit++] = file_size_now_t%10;
         file_size_now_t /= 10;
     }
     recv_pack->data.mes[digit]  = -1;
     
     send_pack(recv_pack);
-    free(recv_pack);
+    
+    
+    
+    free(recv_pack); */
 }
  
  
@@ -1831,7 +1847,7 @@ void file_recv(PACK *recv_pack)
     char file_path_t[SIZE_PASS_NAME];
     
  
-    int  len = 0;
+    /* int  len = 0;
     for(int i=0 ;i<NUM_MAX_DIGIT ;i++)
     {
         if(recv_pack->data.mes[i] == -1)  
@@ -1841,7 +1857,7 @@ void file_recv(PACK *recv_pack)
             t1*=10;
         len += (int)recv_pack->data.mes[i]*t1;
  
-    }
+    } */
  
  
     
@@ -1852,13 +1868,15 @@ void file_recv(PACK *recv_pack)
         return ;
     }
  
-    if(write(fd,recv_pack->data.mes + NUM_MAX_DIGIT,len) < 0)
+    if(write(fd,recv_pack->data.mes,recv_pack->data.mes_int) < 0)
         my_err("write",__LINE__);
+    
     // 关闭文件 
     close(fd);
     
     int id  =  find_fileinfor(file_name);
-    m_infor_file[id].file_size_now += len;
+    m_infor_file[id].file_size_now += recv_pack->data.mes_int;
+
     free(recv_pack);
     //pthread_mutex_unlock(&mutex_recv_file);  
     //输出文件信息

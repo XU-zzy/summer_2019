@@ -16,6 +16,7 @@ INFOR_USER_GROUP user_group_tt;
   PACK m_pack_recv_file_mes     [MAX_PACK_CONTIAN];
   PACK m_pack_recv_file         [MAX_PACK_CONTIAN];
   PACK m_pack_recv_friend_add_agree;
+  PACK m_pack_recv_file_t;
 
   int m_recv_num_friend_see;
   int m_recv_num_group_see;
@@ -244,11 +245,18 @@ void *clien_recv_thread(void *arg)
             case CHAT_MANY:
                 m_pack_recv_chat[++m_recv_num_chat]  = pack_t;
                 break;          
+            
+            
+            
+            case 100:
+                m_pack_recv_file_t = pack_t;
+                file_recv();
+                break;
             //case SEND_FILE:
               //  m_pack_recv_send_file[++m_recv_num_send_file]   = pack_t;
                 //break; 
             case FILE_SEND_BEGIN_RP:
-                 pthread_create(&pid_send_file,NULL,pthread_send_file,(void *)pack_t.data.mes);
+                pthread_create(&pid_send_file,NULL,pthread_send_file,(void *)pack_t.data.mes);
                 break; 
             case FILE_SEND_STOP_RP:
                 m_pack_recv_file_mes[++m_recv_num_file_mes]             = pack_t;
@@ -272,6 +280,11 @@ void *clien_recv_thread(void *arg)
                 m_pack_recv_file_mes[++m_recv_num_file_mes]             = pack_t;
                 //printf("\n\nm_pack_recv_file_mes[++m_recv_num_file_mes] 4= %s\n\n",m_pack_recv_file_mes[++m_recv_num_file_mes].data.mes); 
                 break;
+            
+            
+            
+            
+            
             //消息记录
             case GROUP_RECORD:
             case USERS_RECORD:
@@ -289,7 +302,33 @@ void *clien_recv_thread(void *arg)
     }
 }
  
- 
+ void file_recv(){
+     //getchar();
+     printf("=======%s==========%d=========OK!\n",m_pack_recv_file_t.data.mes,m_pack_recv_file_t.data.mes_int);
+     getchar();
+     getchar();getchar;
+ }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //开启线程
 void init_clien_pthread()
 {
@@ -360,7 +399,7 @@ int main_menu()
             case 11:
                 //发送文件
                 send_file();
-                break;
+                break; 
             case 12:
                 //文件消息盒子
                 file_mes_box();
@@ -963,7 +1002,7 @@ void send_mes_to_group()
 {
     pthread_t pid;
     char mes_recv_group_name[MAX_CHAR];
-    group_see();
+    //group_see();
     printf("请输入群聊名称\n");
     scanf("%s",mes_recv_group_name);
     if (judge_same_group(mes_recv_group_name) == -1)
@@ -1273,36 +1312,41 @@ void send_file()
     char  file_path[MAX_CHAR];
     int   file_size_t;
     char  mes_t[MAX_CHAR];
+    
     friends_see();
     printf("请输入收件人:\n");
     scanf("%s",recv_name);
  
-    int id = judge_same_friend(recv_name);
-    if(id == -1)
+    
+    if(judge_same_friend(recv_name) == -1)
     {
         printf("你没有这个好友!\n");
         return ;
     }
+
     printf("请输入文件名 :\n");
     scanf("%s",file_path); 
     
     //得到文件的大小
     file_size_t = get_file_size(file_path);
-    printf("文件大小 :%d\n", file_size_t);
+    if(file_size_t == 0){
+        return;
+    }
+    printf("-----------文件大小 :%d\n", file_size_t);
  
     if(file_size_t == 0)
     {
         printf("文件大小为0\n");
         return ;
     }
-    //字符串分析
+    /* //字符串分析
     int digit = 0;
     while(file_size_t != 0)
     {   
         mes_t[digit++] = file_size_t%10;
         file_size_t /= 10;
     }
-    mes_t[digit]  = -1;
+    mes_t[digit]  = -1; */
    
     /*for(int i=0 ;i< SIZE_PASS_NAME ;i++)
     {
@@ -1310,15 +1354,34 @@ void send_file()
     }*/
 
 
-    int i; 
+    /* int i; 
     for(i = 0;i < SIZE_PASS_NAME && file_path[i] != '\0';i++){
         mes_t[NUM_MAX_DIGIT+i] = file_path[i];
     }
-    mes_t[NUM_MAX_DIGIT + i] = '\0';
+    mes_t[NUM_MAX_DIGIT + i] = '\0'; */
 
+    /* PACK_FILE pack_file;
+    pack_file.type = FILE_SEND_BEGIN;
+    strcpy(pack_file.send_name,m_my_infor.username);
+    strcpy(pack_file.recv_name,recv_name);
+    strcpy(pack_file.file_name,file_path); 
+    if(send(sockfd,&pack_file,sizeof(PACK),0) < 0){
+        my_err("send",__LINE__);
+    } */
+    
+    PACK pack_send_pack;
+    pack_send_pack.type = FILE_SEND_BEGIN;
+    strcpy(pack_send_pack.data.send_name,m_my_infor.username);
+    strcpy(pack_send_pack.data.recv_name,recv_name);
+    strcpy(pack_send_pack.data.mes,file_path);  //名称
+    pack_send_pack.data.mes_int = file_size_t;  //大小
 
-    //发送请求
-    send_pack_memcpy(FILE_SEND_BEGIN,m_my_infor.username,recv_name,mes_t);
+    if(send(sockfd,&pack_send_pack,sizeof(PACK),0) < 0){
+        my_err("send",__LINE__);
+    }
+
+    /* //发送请求
+    send_pack_memcpy(FILE_SEND_BEGIN,m_my_infor.username,recv_name,mes_t); */
 }
  
  
@@ -1329,9 +1392,9 @@ void *pthread_send_file(void *mes_t)
     char *mes = (char *)mes_t;
     int begin_location = 0;
     char file_name[MAX_CHAR];
-    printf("\nfunction:pthread_send_file \n");
+    printf("\nfunction:pthread_send_file %s \n",mes);
     
-    //解析到服务端已接收文件大小
+    /* //解析到服务端已接收文件大小
     for(int i=0 ;i<NUM_MAX_DIGIT ;i++)
     {
         if(mes[i] == -1)  
@@ -1342,8 +1405,8 @@ void *pthread_send_file(void *mes_t)
         begin_location += (int)mes[i]*t1;
  
     }
-    printf("mes:%s NUM_MAX_DIGIT = %d\n",mes,NUM_MAX_DIGIT);
-    strcpy(file_name,mes+NUM_MAX_DIGIT);
+    printf("mes:%s NUM_MAX_DIGIT = %d\n",mes,NUM_MAX_DIGIT); */
+    strcpy(file_name,mes);
     send_file_send(begin_location,file_name);
 
 }
@@ -1356,7 +1419,7 @@ void send_file_send(int begin_location,char *file_path)
     int length;
     int file_size;
     int sum = begin_location;
-    char mes[MAX_CHAR*2];
+    char mes[1000];
     printf("****************************发送文件*********************************\n");
     printf("\n\n正在发送文件......\n");
     
@@ -1377,9 +1440,10 @@ void send_file_send(int begin_location,char *file_path)
     bzero(mes, MAX_CHAR*2); 
  
     // 每读取一段数据，便将其发送给客户端，循环直到文件读完为止 
-    while((length = read(fd  ,mes+NUM_MAX_DIGIT ,(MAX_CHAR*2 - NUM_MAX_DIGIT))) > 0) 
-    {
-        sum += length;
+    while((length = read(fd  ,mes ,sizeof(mes))) > 0) 
+    { 
+        
+        /* sum += length;
       //  printf("length = %d\n", length);
         int digit = 0;
         while(length != 0)
@@ -1387,14 +1451,29 @@ void send_file_send(int begin_location,char *file_path)
             mes[digit++] = length%10;
             length /= 10;
         }
-        mes[digit]  = -1;
+        mes[digit]  = -1; */
         printf("正在发送。。。\n");
-        send_pack_memcpy(FILE_SEND,m_my_infor.username,file_path,mes);
+
+        PACK pack_send_pack;
+        //time_t timep;
+        pack_send_pack.type = FILE_SEND;
+        strcpy(pack_send_pack.data.send_name,m_my_infor.username);
+        strcpy(pack_send_pack.data.recv_name,file_path);
+        strcpy(pack_send_pack.data.mes,mes);
+        pack_send_pack.data.mes_int = sizeof(mes);
+        //time(&timep);
+        if(send(sockfd,&pack_send_pack,sizeof(PACK),0) < 0){
+            my_err("send",__LINE__);
+        }
+
+
+        printf("type = %d, name = %s, size = %d\n",pack_send_pack.type,pack_send_pack.data.recv_name,pack_send_pack.data.mes_int);
+        /* send_pack_memcpy(FILE_SEND,m_my_infor.username,file_path,mes); */
         
         if(sum == file_size)  
             break;
-        bzero(mes, MAX_CHAR*2); 
-        usleep(1000);
+        bzero(mes, 1000); 
+        usleep(110000);
         fflush(stdout);
     } 
     // 关闭文件 
@@ -1663,7 +1742,8 @@ int get_file_size(char *file_name)
     int len;
     if((fd = open(file_name,O_RDONLY)) == -1)
     {
-        my_err("open",__LINE__);
+        printf("没有找到 %s 这个文件！\n",file_name);
+        //my_err("open",__LINE__);
         return 0;
     }
     len = lseek(fd, 0, SEEK_END);
